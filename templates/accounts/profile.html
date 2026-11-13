@@ -1,19 +1,17 @@
 {% extends "base.html" %}
-{% block title %}My profile{% endblock %}
+{% block title %}Profile{% endblock %}
 {% block content %}
-<section class="card narrow">
-  <h1>My profile</h1>
-  <dl class="profile">
+<div class="head">
+  <h1>Profile</h1>
+  <a class="btn secondary" href="{% url 'profile_edit' %}">Edit</a>
+</div>
+<div class="card">
+  <dl class="details">
+    <dt>Name</dt><dd>{{ user.get_full_name|default:"–" }}</dd>
     <dt>Username</dt><dd>{{ user.username }}</dd>
-    <dt>Name</dt><dd>{{ user.get_full_name|default:"Not set" }}</dd>
     <dt>Email</dt><dd>{{ user.email }}</dd>
-    <dt>ID number</dt><dd>{{ user.id_number|default:"Not set" }}</dd>
+    <dt>ID number</dt><dd>{{ user.id_number|default:"–" }}</dd>
     <dt>Role</dt><dd>{{ user.get_role_display }}</dd>
-    <dt>Member since</dt><dd>{{ user.date_joined|date:"F j, Y" }}</dd>
   </dl>
-  <div class="actions">
-    <a class="button" href="{% url 'profile_edit' %}">Edit profile</a>
-    <a class="button secondary" href="{% url 'dashboard' %}">Back to dashboard</a>
-  </div>
-</section>
+</div>
 {% endblock %}

@@ -108,10 +108,15 @@ class LoginLogoutTests(TestCase):
         response = self.client.post(reverse("login"), {"username": "maria", "password": PASSWORD}, follow=True)
         self.assertRedirects(response, reverse("student_dashboard"))
 
+    def test_login_with_email(self):
+        response = self.client.post(reverse("login"), {"username": "MARIA@example.com", "password": PASSWORD})
+        self.assertRedirects(response, reverse("dashboard"), target_status_code=302)
+        self.assertIn("_auth_user_id", self.client.session)
+
     def test_invalid_credentials_show_error(self):
         response = self.client.post(reverse("login"), {"username": "maria", "password": "wrong"})
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Invalid username or password.", messages_of(response))
+        self.assertIn("Incorrect username, email or password.", messages_of(response))
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_deactivated_user_cannot_log_in(self):
@@ -156,11 +161,11 @@ class RoleDashboardTests(TestCase):
                 expected = 200 if name == own else 403
                 self.assertEqual(self.client.get(reverse(name)).status_code, expected, f"{user.username} -> {name}")
 
-    def test_admin_dashboard_counts_users(self):
+    def test_admin_dashboard_lists_all_users(self):
         self.client.force_login(self.users["admin_dashboard"])
         response = self.client.get(reverse("admin_dashboard"))
-        self.assertEqual(response.context["total_users"], 3)
-        self.assertEqual(response.context["student_count"], 1)
+        self.assertEqual(len(response.context["rows"]), 3)
+        self.assertContains(response, "student@example.com")
 
 
 class AdminUserManagementTests(TestCase):

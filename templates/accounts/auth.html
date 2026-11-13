@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% load static %}
+{% block body %}
+<main class="auth" id="content">
+  <div class="box">
+    <img class="logo" src="{% static 'img/codemm-logo.svg' %}" alt="Codemm" width="130" height="24">
+    {% block auth_content %}{% endblock %}
+  </div>
+</main>
+{% endblock %}

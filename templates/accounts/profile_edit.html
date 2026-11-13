@@ -1,16 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Edit profile{% endblock %}
 {% block content %}
-<section class="card narrow">
-  <h1>Edit profile</h1>
-  <form method="post" novalidate>
+<h1>Edit profile</h1>
+<div class="card">
+  <form method="post" class="stack" novalidate>
     {% csrf_token %}
-    {% for error in form.non_field_errors %}<p class="error">{{ error }}</p>{% endfor %}
-    {% for field in form %}{% include "includes/field.html" %}{% endfor %}
+    <div class="row2">
+      {% include "includes/field.html" with field=form.first_name %}
+      {% include "includes/field.html" with field=form.last_name %}
+    </div>
+    {% include "includes/field.html" with field=form.email %}
+    {% include "includes/field.html" with field=form.id_number %}
     <div class="actions">
-      <button type="submit">Save changes</button>
-      <a class="button secondary" href="{% url 'profile' %}">Cancel</a>
+      <button type="submit" class="btn">Save</button>
+      <a class="btn secondary" href="{% url 'profile' %}">Cancel</a>
     </div>
   </form>
-</section>
+</div>
 {% endblock %}

@@ -2,12 +2,11 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
-from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .decorators import role_required
-from .forms import ProfileForm, RegistrationForm, UserRoleForm
+from .forms import LoginForm, ProfileForm, RegistrationForm, UserRoleForm
 from .models import User
 
 
@@ -28,6 +27,7 @@ def register(request):
 
 class CodemmLoginView(LoginView):
     template_name = "accounts/login.html"
+    authentication_form = LoginForm
     redirect_authenticated_user = True
 
     def form_valid(self, form):
@@ -36,7 +36,7 @@ class CodemmLoginView(LoginView):
         return super().form_valid(form)
 
     def form_invalid(self, form):
-        messages.error(self.request, "Invalid username or password.")
+        messages.error(self.request, "Incorrect username, email or password.")
         return super().form_invalid(form)
 
 
@@ -60,22 +60,14 @@ def student_dashboard(request):
 
 @role_required(User.Role.INSTRUCTOR)
 def instructor_dashboard(request):
-    students = User.objects.filter(role=User.Role.STUDENT, is_active=True)
-    return render(request, "dashboard/instructor.html", {"student_count": students.count()})
+    return render(request, "dashboard/instructor.html")
 
 
 @role_required(User.Role.ADMIN)
 def admin_dashboard(request):
-    counts = dict(User.objects.values_list("role").annotate(total=Count("id")))
     users = User.objects.order_by("role", "last_name", "username")
-    context = {
-        "total_users": sum(counts.values()),
-        "student_count": counts.get(User.Role.STUDENT, 0),
-        "instructor_count": counts.get(User.Role.INSTRUCTOR, 0),
-        "admin_count": counts.get(User.Role.ADMIN, 0),
-        "rows": [(u, UserRoleForm(instance=u, prefix=f"u{u.pk}")) for u in users],
-    }
-    return render(request, "dashboard/admin.html", context)
+    rows = [(u, UserRoleForm(instance=u, prefix=f"u{u.pk}")) for u in users]
+    return render(request, "dashboard/admin.html", {"rows": rows})
 
 
 @require_POST

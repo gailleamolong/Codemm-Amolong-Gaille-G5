@@ -4,37 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Codemm{% endblock %} · Codemm</title>
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="icon" href="{% static 'img/codemm-mark.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=4">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="{% url 'dashboard' %}">Codemm</a>
-    <nav class="nav">
-      {% if user.is_authenticated %}
-        <a href="{% url 'dashboard' %}">Dashboard</a>
-        <a href="{% url 'profile' %}">Profile</a>
-        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Django admin</a>{% endif %}
-        <span class="who">{{ user.username }} · {{ user.get_role_display }}</span>
-        <form method="post" action="{% url 'logout' %}" class="inline">
-          {% csrf_token %}
-          <button type="submit" class="link-button">Log out</button>
-        </form>
-      {% else %}
-        <a href="{% url 'login' %}">Log in</a>
-        <a href="{% url 'register' %}" class="button">Create account</a>
-      {% endif %}
-    </nav>
-  </header>
-
-  <main class="container">
-    {% if messages %}
-      <ul class="messages">
-        {% for message in messages %}
-          <li class="message {{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-    {% block content %}{% endblock %}
-  </main>
+  <a class="skip" href="#content">Skip to content</a>
+  {% block body %}
+  {% with current=request.resolver_match.url_name %}
+  <div class="shell">
+    <aside class="side">
+      <a class="logo" href="{% url 'dashboard' %}"><img src="{% static 'img/codemm-logo-dark.svg' %}" alt="Codemm" width="120" height="22"></a>
+      <nav aria-label="Main">
+        <a class="nav" href="{% url 'dashboard' %}"{% if current == "student_dashboard" or current == "instructor_dashboard" or current == "admin_dashboard" %} aria-current="page"{% endif %}>{% if user.role == "ADMIN" %}Users{% else %}Dashboard{% endif %}</a>
+        <a class="nav" href="{% url 'profile' %}"{% if current == "profile" or current == "profile_edit" %} aria-current="page"{% endif %}>Profile</a>
+      </nav>
+      <div class="foot">
+        <span class="name">{{ user.get_full_name|default:user.username }}</span>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Log out</button></form>
+      </div>
+    </aside>
+    <main class="page" id="content">
+      {% include "includes/messages.html" %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  {% endwith %}
+  {% endblock %}
 </body>
 </html>

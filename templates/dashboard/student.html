@@ -1,24 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Student dashboard{% endblock %}
+{% block title %}Dashboard{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>Hi, {{ user.first_name|default:user.username }}</h1>
-  <p class="muted">Student dashboard. Enroll in a learning track, solve its coding activities and get your code checked automatically.</p>
-  <div class="grid">
-    <div class="stat"><span class="muted">Enrolled tracks</span><strong>0</strong></div>
-    <div class="stat"><span class="muted">Accepted submissions</span><strong>0</strong></div>
-    <div class="stat"><span class="muted">Peer reviews given</span><strong>0</strong></div>
-  </div>
-</section>
-
-<section class="card">
-  <h2>How practice works</h2>
-  <ol>
-    <li>Enroll in a learning track, such as Python Basics or Loops and Conditionals.</li>
-    <li>Open an activity, write your code in the editor and run it with your own input.</li>
-    <li>Submit to check it against the test cases and get a verdict and score.</li>
-    <li>Review a classmate's accepted solution and write a short reflection.</li>
-  </ol>
-  <p class="muted">Tracks, activities and submissions arrive in the next development phase.</p>
-</section>
+<h1>Hi, {{ user.first_name|default:user.username }}</h1>
+<div class="card empty">
+  <p class="muted">You're not enrolled in any learning tracks yet.</p>
+</div>
 {% endblock %}

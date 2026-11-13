@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Access denied{% endblock %}
 {% block content %}
-<section class="card narrow">
-  <h1>Access denied</h1>
-  <p>This page belongs to another role, so you can't open it.</p>
-  <div class="actions"><a class="button" href="{% url 'dashboard' %}">Go to my dashboard</a></div>
-</section>
+<h1>Access denied</h1>
+<p class="muted">This page is for another role.</p>
+<div><a class="btn" href="{% url 'dashboard' %}">Go to my dashboard</a></div>
 {% endblock %}

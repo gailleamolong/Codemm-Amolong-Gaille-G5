@@ -1,46 +1,31 @@
 {% extends "base.html" %}
-{% block title %}Administrator dashboard{% endblock %}
+{% block title %}Users{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>Administrator dashboard</h1>
-  <p class="muted">Manage user accounts and roles.</p>
-  <div class="grid">
-    <div class="stat"><span class="muted">All users</span><strong>{{ total_users }}</strong></div>
-    <div class="stat"><span class="muted">Students</span><strong>{{ student_count }}</strong></div>
-    <div class="stat"><span class="muted">Instructors</span><strong>{{ instructor_count }}</strong></div>
-    <div class="stat"><span class="muted">Administrators</span><strong>{{ admin_count }}</strong></div>
-  </div>
-</section>
-
-<section class="card">
-  <h2>User accounts</h2>
-  <p class="muted">New sign-ups are students. Assign the instructor or administrator role here, or deactivate an account.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Username</th><th>Name</th><th>Email</th><th>ID number</th><th>Role and status</th></tr></thead>
-      <tbody>
-        {% for u, form in rows %}
-          <tr>
-            <td>{{ u.username }}</td>
-            <td>{{ u.get_full_name }}</td>
-            <td>{{ u.email }}</td>
-            <td>{{ u.id_number|default:"–" }}</td>
-            <td>
-              {% if u == user or u.is_superuser %}
-                {{ u.get_role_display }}{% if u == user %} (you){% endif %}
-              {% else %}
-                <form method="post" action="{% url 'admin_update_user' u.pk %}" class="row-form">
-                  {% csrf_token %}
-                  {{ form.role }}
-                  <label class="check">{{ form.is_active }} Active</label>
-                  <button type="submit" class="small">Save</button>
-                </form>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
+<h1>Users</h1>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th></tr></thead>
+    <tbody>
+      {% for u, form in rows %}
+        <tr>
+          <td>{{ u.get_full_name|default:u.username }}</td>
+          <td>{{ u.email }}</td>
+          <td>
+            {% if u == user or u.is_superuser %}
+              {{ u.get_role_display }}{% if u == user %} (you){% endif %}
+            {% else %}
+              <form method="post" action="{% url 'admin_update_user' u.pk %}" class="inline-form">
+                {% csrf_token %}
+                <label class="sr-only" for="{{ form.role.id_for_label }}">Role for {{ u.username }}</label>
+                {{ form.role }}
+                <label>{{ form.is_active }} Active</label>
+                <button type="submit" class="btn secondary sm">Save</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
