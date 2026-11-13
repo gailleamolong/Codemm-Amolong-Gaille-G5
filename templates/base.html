@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Codemm{% endblock %} · Codemm</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{% url 'dashboard' %}">Codemm</a>
+    <nav class="nav">
+      {% if user.is_authenticated %}
+        {% block nav %}<a href="{% url 'dashboard' %}">Dashboard</a>{% endblock %}
+        <span class="who">{{ user.username }} · {{ user.get_role_display }}</span>
+        <form method="post" action="{% url 'logout' %}" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="link-button">Log out</button>
+        </form>
+      {% else %}
+        {% block guest_nav %}<a href="{% url 'login' %}">Log in</a>{% endblock %}
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="container">
+    {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+          <li class="message {{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
