@@ -18,7 +18,8 @@
           <button type="submit" class="link-button">Log out</button>
         </form>
       {% else %}
-        {% block guest_nav %}<a href="{% url 'login' %}">Log in</a>{% endblock %}
+        <a href="{% url 'login' %}">Log in</a>
+        <a href="{% url 'register' %}" class="button">Create account</a>
       {% endif %}
     </nav>
   </header>

@@ -5,6 +5,23 @@ from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from .forms import RegistrationForm
+
+
+def register(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    if request.method == "POST":
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, f"Account created for {user.username}. You can now log in.")
+            return redirect("login")
+        messages.error(request, "Please fix the errors below.")
+    else:
+        form = RegistrationForm()
+    return render(request, "accounts/register.html", {"form": form})
+
 
 class CodemmLoginView(LoginView):
     template_name = "accounts/login.html"
