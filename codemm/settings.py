@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "accounts",
+    "dashboard",
 ]
 
 MIDDLEWARE = [
@@ -105,5 +106,4 @@ AUTH_USER_MODEL = "accounts.User"
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
-
-AUTHENTICATION_BACKENDS = ["accounts.backends.UsernameOrEmailBackend"]
+LOGOUT_REDIRECT_URL = "login"
