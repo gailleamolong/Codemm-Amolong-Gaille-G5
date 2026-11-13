@@ -4,52 +4,8 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import User
 
 
-class RegistrationForm(UserCreationForm):
-    """Sign-up form. UserCreationForm already checks that the username is unique,
-    that both passwords match and that the password passes the validators."""
-
-    first_name = forms.CharField(max_length=150)
-    last_name = forms.CharField(max_length=150)
-    email = forms.EmailField()
-    role = forms.ChoiceField(
-        choices=[
-            (User.Role.LEARNER, User.Role.LEARNER.label),
-            (User.Role.INSTRUCTOR, User.Role.INSTRUCTOR.label),
-        ],
-        initial=User.Role.LEARNER,
-        help_text="Administrator accounts are created by the system administrator.",
-    )
-
-    class Meta(UserCreationForm.Meta):
-        model = User
-        fields = ("username", "first_name", "last_name", "email", "role")
-
-    def clean_email(self):
-        email = self.cleaned_data["email"].strip().lower()
-        if User.objects.filter(email__iexact=email).exists():
-            raise forms.ValidationError("An account with this email already exists.")
-        return email
-
-
-class ProfileForm(forms.ModelForm):
-    """Fields a user may change on their own profile. Username and role are not editable."""
-
-    contact_number = forms.RegexField(
-        regex=r"^\+?[0-9][0-9 \-]{6,18}$",
-        required=False,
-        max_length=20,
-        help_text="Optional. Digits, spaces or dashes, e.g. 0917 123 4567.",
-        error_messages={"invalid": "Enter a valid contact number."},
-    )
-
-    class Meta:
-        model = User
-        fields = ("first_name", "last_name", "email", "contact_number")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["first_name"].required = True
-        self.fields["last_name"].required = True
+class EmailUniqueMixin:
+    """Emails are unique regardless of letter case."""
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
@@ -57,3 +13,38 @@ class ProfileForm(forms.ModelForm):
         if taken.exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
+
+
+class RegistrationForm(EmailUniqueMixin, UserCreationForm):
+    """Student sign-up. UserCreationForm already checks that the username is unique,
+    that both passwords match and that the password passes the validators.
+    New accounts are students; the administrator assigns other roles (SDD F-01)."""
+
+    email = forms.EmailField(max_length=254)
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ("username", "first_name", "last_name", "email", "id_number")
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.role = User.Role.STUDENT
+        if commit:
+            user.save()
+        return user
+
+
+class ProfileForm(EmailUniqueMixin, forms.ModelForm):
+    """Fields users may change on their own profile. Username and role are not editable."""
+
+    class Meta:
+        model = User
+        fields = ("first_name", "last_name", "email", "id_number")
+
+
+class UserRoleForm(forms.ModelForm):
+    """Used by administrators to assign a role and activate or deactivate an account."""
+
+    class Meta:
+        model = User
+        fields = ("role", "is_active")

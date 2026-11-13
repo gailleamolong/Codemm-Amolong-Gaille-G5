@@ -13,7 +13,7 @@
       {% if user.is_authenticated %}
         <a href="{% url 'dashboard' %}">Dashboard</a>
         <a href="{% url 'profile' %}">Profile</a>
-        {% if user.role == 'ADMIN' %}<a href="{% url 'admin:index' %}">Django admin</a>{% endif %}
+        {% if user.is_staff %}<a href="{% url 'admin:index' %}">Django admin</a>{% endif %}
         <span class="who">{{ user.username }} · {{ user.get_role_display }}</span>
         <form method="post" action="{% url 'logout' %}" class="inline">
           {% csrf_token %}

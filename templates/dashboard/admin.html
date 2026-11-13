@@ -3,33 +3,44 @@
 {% block content %}
 <section class="card">
   <h1>Administrator dashboard</h1>
-  <p class="muted">Platform overview and user accounts.</p>
+  <p class="muted">Manage user accounts and roles.</p>
   <div class="grid">
     <div class="stat"><span class="muted">All users</span><strong>{{ total_users }}</strong></div>
-    <div class="stat"><span class="muted">Learners</span><strong>{{ learner_count }}</strong></div>
+    <div class="stat"><span class="muted">Students</span><strong>{{ student_count }}</strong></div>
     <div class="stat"><span class="muted">Instructors</span><strong>{{ instructor_count }}</strong></div>
     <div class="stat"><span class="muted">Administrators</span><strong>{{ admin_count }}</strong></div>
   </div>
-  <div class="actions"><a class="button" href="{% url 'admin:accounts_user_changelist' %}">Manage users</a></div>
 </section>
 
 <section class="card">
-  <h2>Newest accounts</h2>
-  <table>
-    <thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
-    <tbody>
-      {% for u in recent_users %}
-        <tr>
-          <td>{{ u.username }}</td>
-          <td>{{ u.get_full_name }}</td>
-          <td>{{ u.email }}</td>
-          <td>{{ u.get_role_display }}</td>
-          <td>{{ u.date_joined|date:"M j, Y" }}</td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="5" class="muted">No users yet.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <h2>User accounts</h2>
+  <p class="muted">New sign-ups are students. Assign the instructor or administrator role here, or deactivate an account.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Username</th><th>Name</th><th>Email</th><th>ID number</th><th>Role and status</th></tr></thead>
+      <tbody>
+        {% for u, form in rows %}
+          <tr>
+            <td>{{ u.username }}</td>
+            <td>{{ u.get_full_name }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.id_number|default:"–" }}</td>
+            <td>
+              {% if u == user or u.is_superuser %}
+                {{ u.get_role_display }}{% if u == user %} (you){% endif %}
+              {% else %}
+                <form method="post" action="{% url 'admin_update_user' u.pk %}" class="row-form">
+                  {% csrf_token %}
+                  {{ form.role }}
+                  <label class="check">{{ form.is_active }} Active</label>
+                  <button type="submit" class="small">Save</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 {% endblock %}

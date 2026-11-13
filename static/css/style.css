@@ -109,3 +109,9 @@ dl.profile dt { font-weight: 600; }
 dl.profile dd { margin: 0; }
 
 .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+
+.table-wrap { overflow-x: auto; }
+.row-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.row-form select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+.check { display: inline-flex; align-items: center; gap: 4px; font-size: 0.9rem; }
+button.small { padding: 6px 12px; font-size: 0.9rem; }

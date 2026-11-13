@@ -3,11 +3,11 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.db.models import Count
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .decorators import role_required
-from .forms import ProfileForm, RegistrationForm
+from .forms import ProfileForm, RegistrationForm, UserRoleForm
 from .models import User
 
 
@@ -53,28 +53,46 @@ def dashboard(request):
     return redirect(request.user.dashboard_url_name)
 
 
-@role_required(User.Role.LEARNER)
-def learner_dashboard(request):
-    return render(request, "dashboard/learner.html")
+@role_required(User.Role.STUDENT)
+def student_dashboard(request):
+    return render(request, "dashboard/student.html")
 
 
 @role_required(User.Role.INSTRUCTOR)
 def instructor_dashboard(request):
-    learners = User.objects.filter(role=User.Role.LEARNER, is_active=True)
-    return render(request, "dashboard/instructor.html", {"learner_count": learners.count()})
+    students = User.objects.filter(role=User.Role.STUDENT, is_active=True)
+    return render(request, "dashboard/instructor.html", {"student_count": students.count()})
 
 
 @role_required(User.Role.ADMIN)
 def admin_dashboard(request):
     counts = dict(User.objects.values_list("role").annotate(total=Count("id")))
+    users = User.objects.order_by("role", "last_name", "username")
     context = {
         "total_users": sum(counts.values()),
-        "learner_count": counts.get(User.Role.LEARNER, 0),
+        "student_count": counts.get(User.Role.STUDENT, 0),
         "instructor_count": counts.get(User.Role.INSTRUCTOR, 0),
         "admin_count": counts.get(User.Role.ADMIN, 0),
-        "recent_users": User.objects.order_by("-date_joined")[:10],
+        "rows": [(u, UserRoleForm(instance=u, prefix=f"u{u.pk}")) for u in users],
     }
     return render(request, "dashboard/admin.html", context)
+
+
+@require_POST
+@role_required(User.Role.ADMIN)
+def admin_update_user(request, user_id):
+    target = get_object_or_404(User, pk=user_id)
+    if target == request.user or target.is_superuser:
+        messages.error(request, "You can't change your own account or a superuser here.")
+        return redirect("admin_dashboard")
+    form = UserRoleForm(request.POST, instance=target, prefix=f"u{target.pk}")
+    if form.is_valid():
+        form.save()
+        state = "active" if target.is_active else "deactivated"
+        messages.success(request, f"{target.username} is now {target.get_role_display()} ({state}).")
+    else:
+        messages.error(request, f"Could not update {target.username}.")
+    return redirect("admin_dashboard")
 
 
 @login_required

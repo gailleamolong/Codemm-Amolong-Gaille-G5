@@ -7,7 +7,7 @@
     <dt>Username</dt><dd>{{ user.username }}</dd>
     <dt>Name</dt><dd>{{ user.get_full_name|default:"Not set" }}</dd>
     <dt>Email</dt><dd>{{ user.email }}</dd>
-    <dt>Contact number</dt><dd>{{ user.contact_number|default:"Not set" }}</dd>
+    <dt>ID number</dt><dd>{{ user.id_number|default:"Not set" }}</dd>
     <dt>Role</dt><dd>{{ user.get_role_display }}</dd>
     <dt>Member since</dt><dd>{{ user.date_joined|date:"F j, Y" }}</dd>
   </dl>

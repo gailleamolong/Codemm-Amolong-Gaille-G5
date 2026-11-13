@@ -3,21 +3,21 @@
 {% block content %}
 <section class="card">
   <h1>Instructor dashboard</h1>
-  <p class="muted">Welcome, {{ user.get_full_name|default:user.username }}. Guide learners when AI hints are not enough.</p>
+  <p class="muted">Welcome, {{ user.get_full_name|default:user.username }}. Create practice content and monitor student results.</p>
   <div class="grid">
-    <div class="stat"><span class="muted">Active learners</span><strong>{{ learner_count }}</strong></div>
-    <div class="stat"><span class="muted">Pending consultations</span><strong>0</strong></div>
-    <div class="stat"><span class="muted">Flagged posts</span><strong>0</strong></div>
+    <div class="stat"><span class="muted">Active students</span><strong>{{ student_count }}</strong></div>
+    <div class="stat"><span class="muted">Learning tracks</span><strong>0</strong></div>
+    <div class="stat"><span class="muted">Coding activities</span><strong>0</strong></div>
   </div>
 </section>
 
 <section class="card">
   <h2>What you will do here</h2>
   <ul>
-    <li>Accept, reply to and close learners' consultation requests.</li>
-    <li>See which activities learners struggle with.</li>
-    <li>Moderate forum posts and peer reviews.</li>
+    <li>Create, update and delete learning tracks.</li>
+    <li>Add coding activities with instructions, a difficulty level and test cases.</li>
+    <li>View the student progress report and the activity pass-rate summary.</li>
   </ul>
-  <p class="muted">Consultations and moderation arrive in later development phases.</p>
+  <p class="muted">Track and activity management arrive in the next development phase.</p>
 </section>
 {% endblock %}
