@@ -11,7 +11,9 @@
     <a class="brand" href="{% url 'dashboard' %}">Codemm</a>
     <nav class="nav">
       {% if user.is_authenticated %}
-        {% block nav %}<a href="{% url 'dashboard' %}">Dashboard</a>{% endblock %}
+        <a href="{% url 'dashboard' %}">Dashboard</a>
+        <a href="{% url 'profile' %}">Profile</a>
+        {% if user.role == 'ADMIN' %}<a href="{% url 'admin:index' %}">Django admin</a>{% endif %}
         <span class="who">{{ user.username }} · {{ user.get_role_display }}</span>
         <form method="post" action="{% url 'logout' %}" class="inline">
           {% csrf_token %}

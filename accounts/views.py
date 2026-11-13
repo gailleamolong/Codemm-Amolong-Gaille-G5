@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from .decorators import role_required
-from .forms import RegistrationForm
+from .forms import ProfileForm, RegistrationForm
 from .models import User
 
 
@@ -75,3 +75,23 @@ def admin_dashboard(request):
         "recent_users": User.objects.order_by("-date_joined")[:10],
     }
     return render(request, "dashboard/admin.html", context)
+
+
+@login_required
+def profile(request):
+    # Always the logged-in user's own profile: there is no user id in the URL.
+    return render(request, "accounts/profile.html")
+
+
+@login_required
+def profile_edit(request):
+    if request.method == "POST":
+        form = ProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile has been updated.")
+            return redirect("profile")
+        messages.error(request, "Please fix the errors below.")
+    else:
+        form = ProfileForm(instance=request.user)
+    return render(request, "accounts/profile_edit.html", {"form": form})
