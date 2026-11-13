@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Instructor dashboard{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Instructor dashboard</h1>
+  <p class="muted">Welcome, {{ user.get_full_name|default:user.username }}. Guide learners when AI hints are not enough.</p>
+  <div class="grid">
+    <div class="stat"><span class="muted">Active learners</span><strong>{{ learner_count }}</strong></div>
+    <div class="stat"><span class="muted">Pending consultations</span><strong>0</strong></div>
+    <div class="stat"><span class="muted">Flagged posts</span><strong>0</strong></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>What you will do here</h2>
+  <ul>
+    <li>Accept, reply to and close learners' consultation requests.</li>
+    <li>See which activities learners struggle with.</li>
+    <li>Moderate forum posts and peer reviews.</li>
+  </ul>
+  <p class="muted">Consultations and moderation arrive in later development phases.</p>
+</section>
+{% endblock %}

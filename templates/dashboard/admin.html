@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Administrator dashboard{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Administrator dashboard</h1>
+  <p class="muted">Platform overview and user accounts.</p>
+  <div class="grid">
+    <div class="stat"><span class="muted">All users</span><strong>{{ total_users }}</strong></div>
+    <div class="stat"><span class="muted">Learners</span><strong>{{ learner_count }}</strong></div>
+    <div class="stat"><span class="muted">Instructors</span><strong>{{ instructor_count }}</strong></div>
+    <div class="stat"><span class="muted">Administrators</span><strong>{{ admin_count }}</strong></div>
+  </div>
+  <div class="actions"><a class="button" href="{% url 'admin:accounts_user_changelist' %}">Manage users</a></div>
+</section>
+
+<section class="card">
+  <h2>Newest accounts</h2>
+  <table>
+    <thead><tr><th>Username</th><th>Name</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+    <tbody>
+      {% for u in recent_users %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td>{{ u.get_full_name }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.get_role_display }}</td>
+          <td>{{ u.date_joined|date:"M j, Y" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No users yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
