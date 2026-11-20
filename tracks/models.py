@@ -58,3 +58,25 @@ class Activity(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Enrollment(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        DROPPED = "DROPPED", "Dropped"
+
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.RESTRICT, related_name="enrollments")
+    track = models.ForeignKey(LearningTrack, on_delete=models.CASCADE, related_name="enrollments")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
+    enrolled_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "enrollments"
+        ordering = ["-enrolled_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["student", "track"], name="unique_enrollment_per_student_track"),
+            models.CheckConstraint(condition=Q(status__in=["ACTIVE", "DROPPED"]), name="enrollments_status_check"),
+        ]
+
+    def __str__(self):
+        return f"{self.student} in {self.track}"

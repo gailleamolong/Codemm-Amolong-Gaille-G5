@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from accounts.models import User
 
-from .models import Activity, LearningTrack
+from .models import Activity, Enrollment, LearningTrack
 
 
 def make_user(username, role):
@@ -98,3 +98,53 @@ class TrackAccessTests(TestCase):
     def test_tracks_show_on_instructor_dashboard(self):
         self.client.force_login(self.owner)
         self.assertContains(self.client.get(reverse("instructor_dashboard")), "Python Basics")
+
+
+class EnrollmentTests(TestCase):
+    def setUp(self):
+        self.instructor = make_user("sir", User.Role.INSTRUCTOR)
+        self.student = make_user("ana", User.Role.STUDENT)
+        self.track = LearningTrack.objects.create(instructor=self.instructor, title="Python Basics", is_published=True)
+        self.draft = LearningTrack.objects.create(instructor=self.instructor, title="Secret Draft")
+        self.activity = Activity.objects.create(track=self.track, is_published=True, **activity_data())
+        self.client.force_login(self.student)
+
+    def test_catalog_shows_only_published_tracks(self):
+        response = self.client.get(reverse("catalog"))
+        self.assertContains(response, "Python Basics")
+        self.assertNotContains(response, "Secret Draft")
+        self.assertEqual(self.client.get(reverse("catalog_detail", args=[self.draft.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse("enroll", args=[self.draft.pk])).status_code, 404)
+
+    def test_enroll_see_activities_drop_and_rejoin(self):
+        detail = reverse("catalog_detail", args=[self.track.pk])
+        activity_url = reverse("student_activity", args=[self.activity.pk])
+        self.assertNotContains(self.client.get(detail), "Sum of two numbers")
+        self.assertEqual(self.client.get(activity_url).status_code, 404)
+
+        response = self.client.post(reverse("enroll", args=[self.track.pk]))
+        self.assertRedirects(response, detail)
+        enrollment = Enrollment.objects.get(student=self.student, track=self.track)
+        self.assertEqual(enrollment.status, Enrollment.Status.ACTIVE)
+        self.assertContains(self.client.get(detail), "Sum of two numbers")
+        self.assertContains(self.client.get(activity_url), "Read two integers")
+        self.assertContains(self.client.get(reverse("student_dashboard")), "Python Basics")
+
+        again = self.client.post(reverse("enroll", args=[self.track.pk]), follow=True)
+        self.assertContains(again, "already enrolled")
+        self.assertEqual(Enrollment.objects.count(), 1)
+
+        self.client.post(reverse("drop", args=[self.track.pk]))
+        enrollment.refresh_from_db()
+        self.assertEqual(enrollment.status, Enrollment.Status.DROPPED)
+        self.assertEqual(self.client.get(activity_url).status_code, 404)
+
+        self.client.post(reverse("enroll", args=[self.track.pk]))
+        enrollment.refresh_from_db()
+        self.assertEqual(enrollment.status, Enrollment.Status.ACTIVE)
+
+    def test_instructor_sees_enrolled_students_and_cannot_enroll(self):
+        Enrollment.objects.create(student=self.student, track=self.track)
+        self.client.force_login(self.instructor)
+        self.assertContains(self.client.get(reverse("track_detail", args=[self.track.pk])), "Ana Tester")
+        self.assertEqual(self.client.post(reverse("enroll", args=[self.track.pk])).status_code, 403)

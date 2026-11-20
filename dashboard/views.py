@@ -30,6 +30,10 @@ class StudentDashboardView(RoleRequiredMixin, TemplateView):
     role = User.Role.STUDENT
     template_name = "dashboard/student.html"
 
+    def get_context_data(self, **kwargs):
+        enrollments = self.request.user.enrollments.filter(status="ACTIVE").select_related("track")
+        return super().get_context_data(enrollments=enrollments, **kwargs)
+
 
 class InstructorDashboardView(RoleRequiredMixin, TemplateView):
     role = User.Role.INSTRUCTOR
