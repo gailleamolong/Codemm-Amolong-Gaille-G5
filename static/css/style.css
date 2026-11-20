@@ -64,7 +64,9 @@ form.stack { display: flex; flex-direction: column; gap: 16px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-weight: 600; font-size: 14px; }
-.field input { height: 44px; padding: 0 14px; border: 1px solid var(--ctl); border-radius: 8px; background: #fff; }
+.field input, .field select { height: 44px; padding: 0 14px; border: 1px solid var(--ctl); border-radius: 8px; background: #fff; }
+.check { display: inline-flex; align-items: center; gap: 8px; }
+.check input { width: 18px; height: 18px; accent-color: var(--green); }
 .field input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
 .field.error input { border-color: var(--red); }
 .field .err { color: var(--red); font-size: 13.5px; }
