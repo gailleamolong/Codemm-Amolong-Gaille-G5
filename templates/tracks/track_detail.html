@@ -34,4 +34,17 @@
   <p class="muted empty">No activities yet.</p>
   {% endif %}
 </div>
+
+<h2>Enrolled students</h2>
+<div class="card">
+  {% with active=track.enrollments.all %}
+  {% if active %}
+  <ul class="list">
+    {% for e in active %}<li>{{ e.student.get_full_name|default:e.student.username }} <span class="muted">· {{ e.get_status_display }}</span></li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted empty">No students yet.</p>
+  {% endif %}
+  {% endwith %}
+</div>
 {% endblock %}

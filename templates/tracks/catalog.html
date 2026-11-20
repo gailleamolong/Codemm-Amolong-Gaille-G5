@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Browse tracks{% endblock %}
+{% block content %}
+<h1>Browse tracks</h1>
+<div class="card">
+  {% if tracks %}
+  <ul class="list">
+    {% for track in tracks %}
+      <li><a href="{% url 'catalog_detail' track.pk %}">{{ track.title }}</a> <span class="muted">· {{ track.instructor.get_full_name|default:track.instructor.username }}{% if track.pk in enrolled_ids %} · Enrolled{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted empty">No tracks are open yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

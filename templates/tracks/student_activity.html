@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ activity.title }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'catalog_detail' activity.track_id %}">← {{ activity.track.title }}</a></p>
+<h1>{{ activity.title }}</h1>
+<div class="card">
+  <dl class="details">
+    <dt>Difficulty</dt><dd>{{ activity.get_difficulty_display }}</dd>
+    <dt>Language</dt><dd>{{ activity.get_language_display }}</dd>
+    <dt>Due</dt><dd>{{ activity.due_at|date:"M j, Y g:i A"|default:"–" }}</dd>
+  </dl>
+</div>
+<div class="card">{{ activity.instructions|linebreaks }}</div>
+{% endblock %}
