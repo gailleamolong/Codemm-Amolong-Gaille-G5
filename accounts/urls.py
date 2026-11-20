@@ -1,16 +1,9 @@
 from django.urls import path
 
-from . import views
+from .views import ProfileUpdateView, ProfileView, SignUpView
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
-    path("student/", views.student_dashboard, name="student_dashboard"),
-    path("instructor/", views.instructor_dashboard, name="instructor_dashboard"),
-    path("administrator/", views.admin_dashboard, name="admin_dashboard"),
-    path("profile/", views.profile, name="profile"),
-    path("profile/edit/", views.profile_edit, name="profile_edit"),
-    path("administrator/users/<int:user_id>/", views.admin_update_user, name="admin_update_user"),
-    path("register/", views.register, name="register"),
-    path("login/", views.CodemmLoginView.as_view(), name="login"),
-    path("logout/", views.logout_view, name="logout"),
+    path("signup/", SignUpView.as_view(), name="signup"),
+    path("profile/", ProfileView.as_view(), name="profile"),
+    path("profile/edit/", ProfileUpdateView.as_view(), name="profile_edit"),
 ]

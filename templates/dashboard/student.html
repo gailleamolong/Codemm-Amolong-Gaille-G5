@@ -1,8 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-<h1>Hi, {{ user.first_name|default:user.username }}</h1>
-<div class="card empty">
-  <p class="muted">You're not enrolled in any learning tracks yet.</p>
+<div class="head">
+  <h1>Hi, {{ user.first_name|default:user.username }}</h1>
+  <a class="btn" href="{% url 'catalog' %}">Browse tracks</a>
+</div>
+<div class="card">
+  {% if enrollments %}
+  <ul class="list">
+    {% for e in enrollments %}<li><a href="{% url 'catalog_detail' e.track_id %}">{{ e.track.title }}</a></li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted empty">You're not enrolled in any learning tracks yet.</p>
+  {% endif %}
 </div>
 {% endblock %}

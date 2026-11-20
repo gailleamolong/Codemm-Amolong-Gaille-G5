@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ track.title }}{% endblock %}
+{% block content %}
+<div class="head">
+  <h1>{{ track.title }}</h1>
+  <div class="actions">
+    <a class="btn secondary" href="{% url 'track_update' track.pk %}">Edit</a>
+    <a class="btn secondary" href="{% url 'track_delete' track.pk %}">Delete</a>
+  </div>
+</div>
+{% if track.description %}<p class="muted">{{ track.description|linebreaksbr }}</p>{% endif %}
+<p class="muted">{{ track.is_published|yesno:"Published,Draft" }}</p>
+
+<div class="head">
+  <h2>Activities</h2>
+  <a class="btn" href="{% url 'activity_create' track.pk %}">Add activity</a>
+</div>
+<div class="card table-wrap">
+  {% if track.activities.all %}
+  <table>
+    <thead><tr><th scope="col">Title</th><th scope="col">Difficulty</th><th scope="col">Language</th><th scope="col">Status</th></tr></thead>
+    <tbody>
+      {% for activity in track.activities.all %}
+        <tr>
+          <td><a href="{% url 'activity_detail' activity.pk %}">{{ activity.title }}</a></td>
+          <td>{{ activity.get_difficulty_display }}</td>
+          <td>{{ activity.get_language_display }}</td>
+          <td>{{ activity.is_published|yesno:"Published,Draft" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted empty">No activities yet.</p>
+  {% endif %}
+</div>
+
+<h2>Enrolled students</h2>
+<div class="card">
+  {% with active=track.enrollments.all %}
+  {% if active %}
+  <ul class="list">
+    {% for e in active %}<li>{{ e.student.get_full_name|default:e.student.username }} <span class="muted">· {{ e.get_status_display }}</span></li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted empty">No students yet.</p>
+  {% endif %}
+  {% endwith %}
+</div>
+{% endblock %}
