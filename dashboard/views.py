@@ -6,6 +6,7 @@ from django.views import View
 from django.views.generic import ListView, TemplateView, UpdateView
 
 from accounts.models import User
+from tracks.models import Enrollment
 
 DASHBOARDS = {
     User.Role.ADMIN: "admin_dashboard",
@@ -31,7 +32,7 @@ class StudentDashboardView(RoleRequiredMixin, TemplateView):
     template_name = "dashboard/student.html"
 
     def get_context_data(self, **kwargs):
-        enrollments = self.request.user.enrollments.filter(status="ACTIVE").select_related("track")
+        enrollments = self.request.user.enrollments.filter(status=Enrollment.Status.ACTIVE).select_related("track")
         return super().get_context_data(enrollments=enrollments, **kwargs)
 
 

@@ -15,27 +15,34 @@ described in the Software Design Document (SDD).
 | Database | PostgreSQL hosted on Supabase (SQLite is not used) |
 | Code execution (later phase) | Judge0 |
 
-## Project Development 1: Account Feature
+## Core feature: Learning tracks (Project Development 2)
+
+Instructors organize practice into learning tracks, and students enroll to work through them.
+This follows SDD features F-02 (tracks), F-03 (activities) and F-05 (enrollment).
+
+| Role | What they can do |
+|---|---|
+| Instructor | Create, view, edit and delete their own tracks and the coding activities inside them. Publish a track to open it to students. See who is enrolled. |
+| Student | Browse published tracks, enroll, drop and rejoin. Open a track's published activities while enrolled. Enrolled tracks show on the dashboard. |
+| Administrator | Manage user accounts and roles. |
+
+Tables (from the SDD data dictionary): `learning_tracks`, `activities`, `enrollments`.
+The database enforces a unique track title per instructor, a unique activity title per track,
+one enrollment per student per track, and the allowed difficulty, language, time limit
+(500 to 10,000 ms) and attempt limit (1 to 50). Instructors can only reach their own tracks;
+other instructors get 404 and students get 403.
+
+## Account Feature (Project Development 1)
 
 | Requirement | Where it lives |
 |---|---|
-| Registration with validation (required fields, email format, unique username, email and ID number, matching passwords) | `accounts/forms.py` `RegistrationForm`, `/register/` |
-| Hashed passwords through Django's built-in authentication | `accounts/models.py` `User` (custom user model, `password_hash` column) |
-| Login, logout and error messages | `/login/`, `/logout/` (POST only) |
-| Protected pages redirect logged-out users to the login page | `@login_required` and `@role_required` in `accounts/decorators.py` |
-| Role-based dashboards for Administrator, Instructor and Student | `/administrator/`, `/instructor/`, `/student/` |
-| Users cannot open another role's dashboard by typing its URL | `role_required` returns 403 Forbidden |
-| View and edit your own profile (name, email, ID number) | `/profile/`, `/profile/edit/` |
-| Administrator assigns roles and deactivates accounts (SDD F-01) | User accounts table on `/administrator/` |
+| Registration with validation and hashed passwords | `accounts/forms.py` `SignUpForm`, `/accounts/signup/` |
+| Login and logout | Django's built-in `/accounts/login/` and `/accounts/logout/` |
+| Role dashboards that block other roles | `dashboard/views.py` `RoleRequiredMixin`: `/student/`, `/instructor/`, `/administrator/` |
+| View and edit your own profile | `/accounts/profile/`, `/accounts/profile/edit/` |
+| Administrator assigns roles and deactivates accounts | `/administrator/` |
 
-New sign-ups are students. The administrator promotes users to instructor or administrator.
-The first administrator is created with `python manage.py createsuperuser`.
-
-### `users` table (SDD data dictionary)
-
-`user_id` PK, `username` UNIQUE, `email` UNIQUE, `password_hash`, `first_name`, `last_name`,
-`id_number` UNIQUE NULL, `role` CHECK IN (`ADMIN`, `INSTRUCTOR`, `STUDENT`) DEFAULT `STUDENT`,
-`is_active`, `created_at`. Django adds `is_staff`, `is_superuser` and `last_login` for its admin site.
+New sign-ups are students. The first administrator is created with `python manage.py createsuperuser`.
 
 ## Setup
 
@@ -81,10 +88,17 @@ rather than Supabase.
 
 ```
 codemm/      settings (reads .env), root URLs
-accounts/    custom user model, forms, views, role decorator, tests
-templates/   base layout, account pages, role dashboards, 403 page
-static/css/  stylesheet
+accounts/    custom user model, sign-up and profile views, tests
+dashboard/   role dashboards, RoleRequiredMixin, user role editing
+tracks/      learning tracks, activities and enrollments (core feature), tests
+templates/   pages for each app
+static/      stylesheet, Codemm logo and fonts
 ```
+
+## Branches
+
+`main` holds stable releases, `develop` integrates features, and each feature has its own
+`feature/<name>` branch merged into `develop` through a pull request.
 
 ## Security notes
 
