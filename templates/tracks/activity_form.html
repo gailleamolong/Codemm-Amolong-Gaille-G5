@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit activity{% else %}New activity{% endif %}{% endblock %}
+{% block content %}
+<h1>{% if object %}Edit {{ object.title }}{% else %}New activity in {{ track.title }}{% endif %}</h1>
+<div class="card">
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    {% include "includes/field.html" with field=form.title %}
+    {% include "includes/field.html" with field=form.instructions %}
+    <div class="row2">
+      {% include "includes/field.html" with field=form.difficulty %}
+      {% include "includes/field.html" with field=form.language %}
+    </div>
+    <div class="row2">
+      {% include "includes/field.html" with field=form.time_limit_ms %}
+      {% include "includes/field.html" with field=form.max_attempts %}
+    </div>
+    {% include "includes/field.html" with field=form.due_at %}
+    <label class="check">{{ form.is_published }} Published</label>
+    <div class="actions">
+      <button type="submit" class="btn">Save</button>
+      <a class="btn secondary" href="{% url 'track_detail' track.pk %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
