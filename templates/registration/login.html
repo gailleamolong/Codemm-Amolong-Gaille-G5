@@ -1,14 +1,15 @@
-{% extends "accounts/auth.html" %}
+{% extends "registration/auth.html" %}
 {% block title %}Log in{% endblock %}
 {% block auth_content %}
 <h1>Log in</h1>
 {% include "includes/messages.html" %}
-<form method="post" class="stack" novalidate>
+{% if form.errors %}<p class="msg error">Incorrect username or password.</p>{% endif %}
+<form method="post" class="stack">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ next }}">
   {% include "includes/field.html" with field=form.username %}
   {% include "includes/field.html" with field=form.password %}
   <button type="submit" class="btn block">Log in</button>
 </form>
-<p class="switch">No account? <a href="{% url 'register' %}">Sign up</a></p>
+<p class="switch">No account? <a href="{% url 'signup' %}">Sign up</a></p>
 {% endblock %}
