@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ activity.title }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'track_detail' activity.track_id %}">← {{ activity.track.title }}</a></p>
+<div class="head">
+  <h1>{{ activity.title }}</h1>
+  <div class="actions">
+    <a class="btn secondary" href="{% url 'activity_update' activity.pk %}">Edit</a>
+    <a class="btn secondary" href="{% url 'activity_delete' activity.pk %}">Delete</a>
+  </div>
+</div>
+<div class="card">
+  <dl class="details">
+    <dt>Difficulty</dt><dd>{{ activity.get_difficulty_display }}</dd>
+    <dt>Language</dt><dd>{{ activity.get_language_display }}</dd>
+    <dt>Time limit</dt><dd>{{ activity.time_limit_ms }} ms</dd>
+    <dt>Attempts</dt><dd>{{ activity.max_attempts }}</dd>
+    <dt>Due</dt><dd>{{ activity.due_at|date:"M j, Y g:i A"|default:"–" }}</dd>
+  </dl>
+</div>
+<div class="card">{{ activity.instructions|linebreaks }}</div>
+{% endblock %}

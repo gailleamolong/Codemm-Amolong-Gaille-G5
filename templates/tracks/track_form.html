@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit track{% else %}New track{% endif %}{% endblock %}
+{% block content %}
+<h1>{% if object %}Edit {{ object.title }}{% else %}New track{% endif %}</h1>
+<div class="card">
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    {% include "includes/field.html" with field=form.title %}
+    {% include "includes/field.html" with field=form.description %}
+    <label class="check">{{ form.is_published }} Published (students can see and enroll)</label>
+    <div class="actions">
+      <button type="submit" class="btn">Save</button>
+      <a class="btn secondary" href="{% if object %}{% url 'track_detail' object.pk %}{% else %}{% url 'track_list' %}{% endif %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

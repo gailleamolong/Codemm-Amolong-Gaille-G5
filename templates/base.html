@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Codemm{% endblock %} · Codemm</title>
   <link rel="icon" href="{% static 'img/codemm-mark.svg' %}" type="image/svg+xml">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=6">
 </head>
 <body>
   <a class="skip" href="#content">Skip to content</a>
@@ -16,6 +16,7 @@
       <a class="logo" href="{% url 'dashboard' %}"><img src="{% static 'img/codemm-logo-dark.svg' %}" alt="Codemm" width="120" height="22"></a>
       <nav aria-label="Main">
         <a class="nav" href="{% url 'dashboard' %}"{% if current == "student_dashboard" or current == "instructor_dashboard" or current == "admin_dashboard" %} aria-current="page"{% endif %}>{% if user.role == "ADMIN" %}Users{% else %}Dashboard{% endif %}</a>
+        {% if user.role == "INSTRUCTOR" %}<a class="nav" href="{% url 'track_list' %}"{% if "track" in current or "activity" in current %} aria-current="page"{% endif %}>Tracks</a>{% endif %}
         <a class="nav" href="{% url 'profile' %}"{% if current == "profile" or current == "profile_edit" %} aria-current="page"{% endif %}>Profile</a>
       </nav>
       <div class="foot">
