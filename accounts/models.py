@@ -6,10 +6,7 @@ from django.utils import timezone
 
 
 class User(AbstractUser):
-    """The `users` table from the SDD data dictionary (Django custom user model).
-
-    Passwords are hashed by Django's auth system and stored in `password_hash`.
-    """
+    """The users table from the SDD. Superusers are administrators; a blank ID number is stored as NULL."""
 
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Administrator"
@@ -40,18 +37,11 @@ class User(AbstractUser):
         ]
 
     def save(self, *args, **kwargs):
-        # Superusers created with `createsuperuser` are Codemm administrators.
         if self.is_superuser:
             self.role = self.Role.ADMIN
-        # Store a blank ID number as NULL so UNIQUE allows many users without one.
         if not self.id_number:
             self.id_number = None
         super().save(*args, **kwargs)
 
-    @property
-    def dashboard_url_name(self):
-        return {
-            self.Role.ADMIN: "admin_dashboard",
-            self.Role.INSTRUCTOR: "instructor_dashboard",
-            self.Role.STUDENT: "student_dashboard",
-        }[self.role]
+    def __str__(self):
+        return self.username
