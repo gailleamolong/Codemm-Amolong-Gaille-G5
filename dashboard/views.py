@@ -35,6 +35,9 @@ class InstructorDashboardView(RoleRequiredMixin, TemplateView):
     role = User.Role.INSTRUCTOR
     template_name = "dashboard/instructor.html"
 
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(tracks=self.request.user.tracks.all(), **kwargs)
+
 
 class AdminDashboardView(RoleRequiredMixin, ListView):
     role = User.Role.ADMIN
