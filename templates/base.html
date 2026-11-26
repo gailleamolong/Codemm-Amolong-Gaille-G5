@@ -17,6 +17,7 @@
       <nav aria-label="Main">
         <a class="nav" href="{% url 'dashboard' %}"{% if current == "student_dashboard" or current == "instructor_dashboard" or current == "admin_dashboard" %} aria-current="page"{% endif %}>{% if user.role == "ADMIN" %}Users{% else %}Dashboard{% endif %}</a>
         {% if user.role == "STUDENT" %}<a class="nav" href="{% url 'catalog' %}"{% if "catalog" in current or current == "student_activity" %} aria-current="page"{% endif %}>Browse tracks</a>{% endif %}
+        {% if user.role == "STUDENT" %}<a class="nav" href="{% url 'my_progress' %}"{% if current == "my_progress" %} aria-current="page"{% endif %}>My progress</a>{% endif %}
         {% if user.role == "INSTRUCTOR" %}<a class="nav" href="{% url 'track_list' %}"{% if "track" in current or "activity" in current %} aria-current="page"{% endif %}>Tracks</a>{% endif %}
         <a class="nav" href="{% url 'profile' %}"{% if current == "profile" or current == "profile_edit" %} aria-current="page"{% endif %}>Profile</a>
       </nav>

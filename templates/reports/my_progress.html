@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}My progress{% endblock %}
+{% block content %}
+<h1>My progress</h1>
+{% for report in reports %}
+<h2>{{ report.track.title }}</h2>
+<div class="card">
+  <p class="muted">{{ report.row.attempted }} of {{ report.total }} activities attempted · {{ report.row.accepted }} accepted · {{ report.row.reviews_received }} peer review{{ report.row.reviews_received|pluralize }} received</p>
+  <ul class="list">
+    {% for activity, score in report.scores %}
+    <li>{{ activity.title }} <span class="muted">· best {% if score is None %}–{% else %}{{ score|floatformat:0 }}%{% endif %}</span></li>
+    {% endfor %}
+  </ul>
+</div>
+{% empty %}
+<div class="card"><p class="muted empty">Enroll in a track to see your progress.</p></div>
+{% endfor %}
+{% endblock %}
