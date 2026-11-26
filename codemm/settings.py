@@ -108,3 +108,6 @@ AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"
+
+# Judge0 code execution. Empty means code checking is switched off and no code leaves this server.
+JUDGE0_URL = os.environ.get("JUDGE0_URL", "").rstrip("/")
