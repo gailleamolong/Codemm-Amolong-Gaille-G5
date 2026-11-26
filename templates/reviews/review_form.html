@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Review{% endblock %}
+{% block content %}
+<p><a href="{% url 'student_activity' submission.activity_id %}">← {{ submission.activity.title }}</a></p>
+<h1>Review {{ submission.enrollment.student.first_name|default:submission.enrollment.student.username }}'s solution</h1>
+<pre>{{ submission.source_code }}</pre>
+<div class="card">
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    <div class="row3">
+      {% include "includes/field.html" with field=form.correctness_rating %}
+      {% include "includes/field.html" with field=form.readability_rating %}
+      {% include "includes/field.html" with field=form.approach_rating %}
+    </div>
+    {% include "includes/field.html" with field=form.comment %}
+    <div class="actions">
+      <button type="submit" class="btn">{% if object %}Save review{% else %}Post review{% endif %}</button>
+      {% if object %}<a class="btn secondary" href="{% url 'review_delete' object.pk %}">Delete</a>{% endif %}
+      <a class="btn secondary" href="{% url 'student_activity' submission.activity_id %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

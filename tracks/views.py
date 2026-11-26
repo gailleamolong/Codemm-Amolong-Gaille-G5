@@ -209,4 +209,5 @@ class SubmissionDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         results = self.object.results.select_related("test_case")
-        return super().get_context_data(results=results, **kwargs)
+        reviews = self.object.reviews.select_related("reviewer")
+        return super().get_context_data(results=results, reviews=reviews, **kwargs)

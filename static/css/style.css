@@ -65,6 +65,7 @@ h1 { margin: 0; font: 600 28px/1.2 var(--display); }
 
 /* Forms */
 form.stack { display: flex; flex-direction: column; gap: 16px; }
+.row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-weight: 600; font-size: 14px; }
@@ -120,7 +121,7 @@ tr:last-child td { border-bottom: none; }
   .side .foot .name { display: none; }
   .side nav { order: 3; width: 100%; display: flex; gap: 4px; }
   .page { padding: 24px 16px; }
-  .row2 { grid-template-columns: 1fr; }
+  .row2, .row3 { grid-template-columns: 1fr; }
   .search input { flex-basis: 100%; }
   table, tbody, tr, td { display: block; }
   thead { display: none; }

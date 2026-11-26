@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "accounts",
     "dashboard",
     "tracks",
+    "reviews",
 ]
 
 MIDDLEWARE = [
