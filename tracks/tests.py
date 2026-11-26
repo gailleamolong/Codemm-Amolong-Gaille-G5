@@ -436,3 +436,46 @@ class Judge0ClientTests(TestCase):
         with mock.patch("urllib.request.urlopen") as urlopen, self.assertRaises(judge0.Judge0Error):
             judge0.run("PYTHON", "print(1)", "", 1000)
         urlopen.assert_not_called()
+
+
+@override_settings(JUDGE0_URL="http://judge0.test")
+class RunCodeTests(TestCase):
+    def setUp(self):
+        sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=sir, title="Python Basics", is_published=True)
+        self.activity = Activity.objects.create(track=track, is_published=True, **activity_data())
+        ActivityTest.objects.create(activity=self.activity, seq_no=1, expected_output="5")
+        self.student = make_user("ana", User.Role.STUDENT)
+        Enrollment.objects.create(student=self.student, track=track)
+        self.client.force_login(self.student)
+        self.url = reverse("student_activity", args=[self.activity.pk])
+
+    def run_code(self, result, code="print(input())", stdin="hello"):
+        with mock.patch("tracks.judge0.run", side_effect=result) as run:
+            response = self.client.post(self.url, {"action": "run", "source_code": code, "stdin": stdin})
+        return response, run
+
+    def test_run_shows_output_and_saves_nothing(self):
+        response, run = self.run_code([outcome(stdout="hello\n")])
+        self.assertContains(response, "Run · Finished")
+        self.assertContains(response, "hello")
+        run.assert_called_once_with("PYTHON", "print(input())", "hello", 2000)
+        self.assertFalse(Submission.objects.exists())
+
+    def test_run_reports_errors(self):
+        response, _ = self.run_code([outcome(status=judge0.COMPILE_ERROR, error="SyntaxError: bad")])
+        self.assertContains(response, "Compilation error")
+        self.assertContains(response, "SyntaxError: bad")
+
+    def test_run_does_not_use_attempts_or_care_about_the_limit(self):
+        Activity.objects.filter(pk=self.activity.pk).update(max_attempts=1, due_at=timezone.now() - timedelta(days=1))
+        response, run = self.run_code([outcome(stdout="ok")])
+        run.assert_called_once()
+        self.assertContains(response, "Run · Finished")
+
+    def test_run_needs_code_and_a_working_checker(self):
+        response, run = self.run_code([], code="")
+        run.assert_not_called()
+        self.assertContains(response, "This field is required.")
+        response, _ = self.run_code(judge0.Judge0Error("The code checker couldn't be reached. Try again in a minute."))
+        self.assertContains(response, "couldn")

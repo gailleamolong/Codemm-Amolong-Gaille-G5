@@ -99,6 +99,10 @@ class SubmissionForm(forms.Form):
         label="Your code", strip=False, max_length=Submission.MAX_CODE_LENGTH,
         widget=forms.Textarea(attrs={"rows": 14, "spellcheck": "false", "class": "code"}),
     )
+    stdin = forms.CharField(
+        label="Input for Run", required=False, strip=False, max_length=10000,
+        widget=forms.Textarea(attrs={"rows": 3, "spellcheck": "false", "class": "code small"}),
+    )
 
     def clean_source_code(self):
         code = self.cleaned_data["source_code"]
