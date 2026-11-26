@@ -13,23 +13,24 @@ described in the Software Design Document (SDD).
 |---|---|
 | Back end and front end | Django 5.2 with Django templates, HTML and CSS |
 | Database | PostgreSQL hosted on Supabase (SQLite is not used) |
-| Code execution (later phase) | Judge0 |
+| Code execution | Judge0 (off until `JUDGE0_URL` is set) |
 
 ## Core feature: Learning tracks
 
 Instructors organize practice into learning tracks of coding activities, each with its own test
 cases, and students enroll to work through them. This follows SDD features F-02 (tracks),
 F-03 (activities), F-04 (test cases), F-05 (enrollment), F-06 and F-07 (code editor, Run,
-Submit and automatic checking) and F-08 (search and filtering).
+Submit and automatic checking), F-08 (search and filtering), F-09 (peer reviews), F-10
+(reflections), F-11 and F-12 (progress report and pass-rate summary) and F-13 (CSV export).
 
 | Role | What they can do |
 |---|---|
-| Instructor | Create, view, edit and delete their own tracks, the coding activities inside them, and each activity's test cases (visible samples or hidden). Publish tracks and activities. See who is enrolled. See every submission on their activities, with full test results, and filter by student and verdict. Search their tracks and filter by status; filter a track's activities. |
-| Student | Search and filter published tracks, enroll, drop and rejoin. Open a track's published activities while enrolled and see the sample test cases (never the hidden ones). Write code, Run it with their own input, and Submit it to be checked against every test case. See the verdict, score and results (hidden tests show only pass or fail). Enrolled tracks and recent attempts show on the dashboard. |
+| Instructor | Create, view, edit and delete their own tracks, the coding activities inside them, and each activity's test cases (visible samples or hidden). Publish tracks and activities. See who is enrolled. See every submission on their activities, with full test results, and filter by student and verdict. Search their tracks and filter by status; filter a track's activities. Open each track's student progress report and activity pass-rate summary and download both as CSV. |
+| Student | Search and filter published tracks, enroll, drop and rejoin. Open a track's published activities while enrolled and see the sample test cases (never the hidden ones). Write code, Run it with their own input, and Submit it to be checked against every test case. See the verdict, score and results (hidden tests show only pass or fail). Review classmates' accepted solutions, write a reflection on each attempt, and follow their progress under My progress. Enrolled tracks and recent attempts show on the dashboard. |
 | Administrator | Manage user accounts and roles. |
 
 Tables (from the SDD data dictionary): `learning_tracks`, `activities`, `test_cases`, `enrollments`,
-`submissions`, `test_results`.
+`submissions`, `test_results`, `peer_reviews`, `reflections`.
 The database enforces a unique track title per instructor, a unique activity title per track,
 a unique test case number per activity with at least 1 point, one enrollment per student per
 track, and the allowed difficulty, language, time limit (500 to 10,000 ms) and attempt limit
@@ -49,7 +50,9 @@ To turn it on, set `JUDGE0_URL` to a Judge0 server, for example the public
 data in test cases) or your own Judge0 on a Linux server. The automated tests replace Judge0
 with a stand-in and never call the network.
 
-Not built yet (SDD): peer reviews, reflections, and the reports.
+Peer reviews follow BR-17 to BR-19 (accepted solutions only, classmates in the same track, never
+your own, one review each, ratings 1 to 5, a comment of at least 20 characters). Reflections follow
+BR-20 (one per submission, by its author, at least 50 characters).
 
 ## Account Feature (Project Development 1)
 
@@ -109,7 +112,9 @@ rather than Supabase.
 codemm/      settings (reads .env), root URLs
 accounts/    custom user model, sign-up and profile views, tests
 dashboard/   role dashboards, RoleRequiredMixin, user role editing
-tracks/      learning tracks, activities, test cases, enrollments and search (core feature), tests
+tracks/      learning tracks, activities, test cases, enrollments, search, submissions and Judge0 checking, tests
+reviews/     peer reviews and reflections, tests
+reports/     progress report, pass-rate summary and CSV export, tests
 templates/   pages for each app
 static/      stylesheet, Codemm logo and fonts
 ```
