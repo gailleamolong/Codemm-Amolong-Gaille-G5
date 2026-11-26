@@ -15,22 +15,27 @@ described in the Software Design Document (SDD).
 | Database | PostgreSQL hosted on Supabase (SQLite is not used) |
 | Code execution (later phase) | Judge0 |
 
-## Core feature: Learning tracks (Project Development 2)
+## Core feature: Learning tracks
 
-Instructors organize practice into learning tracks, and students enroll to work through them.
-This follows SDD features F-02 (tracks), F-03 (activities) and F-05 (enrollment).
+Instructors organize practice into learning tracks of coding activities, each with its own test
+cases, and students enroll to work through them. This follows SDD features F-02 (tracks),
+F-03 (activities), F-04 (test cases), F-05 (enrollment) and F-08 (search and filtering).
 
 | Role | What they can do |
 |---|---|
-| Instructor | Create, view, edit and delete their own tracks and the coding activities inside them. Publish a track to open it to students. See who is enrolled. |
-| Student | Browse published tracks, enroll, drop and rejoin. Open a track's published activities while enrolled. Enrolled tracks show on the dashboard. |
+| Instructor | Create, view, edit and delete their own tracks, the coding activities inside them, and each activity's test cases (visible samples or hidden). Publish tracks and activities. See who is enrolled. Search their tracks and filter by status; filter a track's activities. |
+| Student | Search and filter published tracks, enroll, drop and rejoin. Open a track's published activities while enrolled and see the sample test cases (never the hidden ones). Enrolled tracks show on the dashboard. |
 | Administrator | Manage user accounts and roles. |
 
-Tables (from the SDD data dictionary): `learning_tracks`, `activities`, `enrollments`.
+Tables (from the SDD data dictionary): `learning_tracks`, `activities`, `test_cases`, `enrollments`.
 The database enforces a unique track title per instructor, a unique activity title per track,
-one enrollment per student per track, and the allowed difficulty, language, time limit
-(500 to 10,000 ms) and attempt limit (1 to 50). Instructors can only reach their own tracks;
-other instructors get 404 and students get 403.
+a unique test case number per activity with at least 1 point, one enrollment per student per
+track, and the allowed difficulty, language, time limit (500 to 10,000 ms) and attempt limit
+(1 to 50). An activity can only be published once it has a test case. Instructors can only reach
+their own tracks; other instructors get 404 and students get 403.
+
+Not built yet (SDD): code editor and submissions with Judge0 checking, peer reviews, reflections,
+and the reports.
 
 ## Account Feature (Project Development 1)
 
@@ -90,7 +95,7 @@ rather than Supabase.
 codemm/      settings (reads .env), root URLs
 accounts/    custom user model, sign-up and profile views, tests
 dashboard/   role dashboards, RoleRequiredMixin, user role editing
-tracks/      learning tracks, activities and enrollments (core feature), tests
+tracks/      learning tracks, activities, test cases, enrollments and search (core feature), tests
 templates/   pages for each app
 static/      stylesheet, Codemm logo and fonts
 ```
