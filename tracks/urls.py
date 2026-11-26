@@ -15,6 +15,7 @@ urlpatterns = [
     path("activities/<int:activity_pk>/tests/new/", views.TestCaseCreateView.as_view(), name="test_case_create"),
     path("tests/<int:pk>/edit/", views.TestCaseUpdateView.as_view(), name="test_case_update"),
     path("tests/<int:pk>/delete/", views.TestCaseDeleteView.as_view(), name="test_case_delete"),
+    path("submissions/<int:pk>/", views.SubmissionDetailView.as_view(), name="submission_detail"),
     path("browse/", student_views.CatalogView.as_view(), name="catalog"),
     path("browse/<int:pk>/", student_views.CatalogDetailView.as_view(), name="catalog_detail"),
     path("browse/<int:pk>/enroll/", student_views.EnrollView.as_view(), name="enroll"),

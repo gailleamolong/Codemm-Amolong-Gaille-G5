@@ -20,4 +20,35 @@
   </div>
 </div>
 {% endfor %}
+
+{% if blocked %}<p class="msg error">{{ blocked }}</p>{% endif %}
+<div class="card">
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    {% include "includes/field.html" with field=form.source_code %}
+    <div class="actions">
+      <button type="submit" class="btn"{% if blocked %} disabled{% endif %}>Submit</button>
+      <span class="muted">{{ attempts_left }} of {{ activity.max_attempts }} attempts left · {{ activity.get_language_display }}{% if activity.language == "JAVA" %} · name your class Main{% endif %}</span>
+    </div>
+  </form>
+</div>
+
+{% if attempts %}
+<h2>Your attempts</h2>
+<div class="card table-wrap">
+  <table>
+    <thead><tr><th scope="col">Attempt</th><th scope="col">Verdict</th><th scope="col">Score</th><th scope="col">Submitted</th></tr></thead>
+    <tbody>
+      {% for s in attempts %}
+      <tr>
+        <td><a href="{% url 'submission_detail' s.pk %}">Attempt {{ s.attempt_no }}</a></td>
+        <td>{{ s.get_verdict_display }}</td>
+        <td>{{ s.score|floatformat:0 }}%</td>
+        <td>{{ s.submitted_at|date:"M j, g:i A" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}

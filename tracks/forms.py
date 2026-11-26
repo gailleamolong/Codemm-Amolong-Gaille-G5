@@ -1,7 +1,7 @@
 from django import forms
 from django.db.models import Q
 
-from .models import Activity, LearningTrack, TestCase
+from .models import Activity, LearningTrack, Submission, TestCase
 
 
 class TrackForm(forms.ModelForm):
@@ -92,3 +92,16 @@ def filter_activities(activities, form):
     if form.value("language"):
         activities = activities.filter(language=form.value("language"))
     return activities
+
+
+class SubmissionForm(forms.Form):
+    source_code = forms.CharField(
+        label="Your code", strip=False, max_length=Submission.MAX_CODE_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 14, "spellcheck": "false", "class": "code"}),
+    )
+
+    def clean_source_code(self):
+        code = self.cleaned_data["source_code"]
+        if not code.strip():
+            raise forms.ValidationError("Write some code before submitting.")
+        return code
