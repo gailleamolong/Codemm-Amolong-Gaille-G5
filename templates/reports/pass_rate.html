@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Pass rates · {{ track.title }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'track_detail' track.pk %}">← {{ track.title }}</a></p>
+<div class="head">
+  <h1>Activity pass rates</h1>
+  <a class="btn secondary" href="?format=csv">Download CSV</a>
+</div>
+<div class="card table-wrap">
+  {% if rows %}
+  <table>
+    <thead><tr><th scope="col">Activity</th><th scope="col">Attempted</th><th scope="col">Accepted</th><th scope="col">Pass rate</th><th scope="col">Average attempts</th><th scope="col">Most-failed test</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><a href="{% url 'activity_detail' r.activity.pk %}">{{ r.activity.title }}</a></td>
+        <td>{{ r.attempted }}</td>
+        <td>{{ r.accepted }}</td>
+        <td>{% if r.pass_rate is None %}–{% else %}{{ r.pass_rate }}%{% endif %}</td>
+        <td>{{ r.average_attempts|default:"–" }}</td>
+        <td>{% if r.most_failed %}Test {{ r.most_failed }}{% else %}–{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted empty">No activities yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

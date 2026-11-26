@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Progress · {{ track.title }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'track_detail' track.pk %}">← {{ track.title }}</a></p>
+<div class="head">
+  <h1>Student progress</h1>
+  <a class="btn secondary" href="?format=csv">Download CSV</a>
+</div>
+<div class="card table-wrap">
+  {% if rows %}
+  <table>
+    <thead><tr><th scope="col">Student</th><th scope="col">Attempted</th><th scope="col">Accepted</th><th scope="col">Reviews received</th>{% for a in activities %}<th scope="col">{{ a.title }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.student.get_full_name|default:r.student.username }}{% if r.status != "Active" %} ({{ r.status|lower }}){% endif %}</td>
+        <td>{{ r.attempted }} of {{ activities|length }}</td>
+        <td>{{ r.accepted }}</td>
+        <td>{{ r.reviews_received }}</td>
+        {% for score in r.best_scores %}<td>{% if score is None %}–{% else %}{{ score|floatformat:0 }}%{% endif %}</td>{% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted empty">No students enrolled yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
