@@ -11,4 +11,13 @@
   </dl>
 </div>
 <div class="card">{{ activity.instructions|linebreaks }}</div>
+{% for test in samples %}
+<div class="card">
+  <h3>Example {{ forloop.counter }}</h3>
+  <div class="row2">
+    <div><p class="muted">Sample input</p><pre>{{ test.input_data|default:"(none)" }}</pre></div>
+    <div><p class="muted">Expected output</p><pre>{{ test.expected_output }}</pre></div>
+  </div>
+</div>
+{% endfor %}
 {% endblock %}

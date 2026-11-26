@@ -15,12 +15,13 @@
   <h2>Activities</h2>
   <a class="btn" href="{% url 'activity_create' track.pk %}">Add activity</a>
 </div>
+{% include "includes/search.html" with show_q=True show_difficulty=True show_language=True %}
 <div class="card table-wrap">
-  {% if track.activities.all %}
+  {% if activities %}
   <table>
     <thead><tr><th scope="col">Title</th><th scope="col">Difficulty</th><th scope="col">Language</th><th scope="col">Status</th></tr></thead>
     <tbody>
-      {% for activity in track.activities.all %}
+      {% for activity in activities %}
         <tr>
           <td><a href="{% url 'activity_detail' activity.pk %}">{{ activity.title }}</a></td>
           <td>{{ activity.get_difficulty_display }}</td>
@@ -31,7 +32,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="muted empty">No activities yet.</p>
+  <p class="muted empty">{% if request.GET %}No activities match.{% else %}No activities yet.{% endif %}</p>
   {% endif %}
 </div>
 

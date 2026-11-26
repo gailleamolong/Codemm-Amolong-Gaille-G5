@@ -6,6 +6,7 @@ from django.views.generic import DetailView, ListView
 from accounts.models import User
 from dashboard.views import RoleRequiredMixin
 
+from .forms import SearchForm, filter_activities, filter_tracks
 from .models import Activity, Enrollment, LearningTrack
 
 
@@ -18,11 +19,14 @@ class CatalogView(StudentMixin, ListView):
     context_object_name = "tracks"
 
     def get_queryset(self):
-        return LearningTrack.objects.filter(is_published=True).select_related("instructor")
+        self.search = SearchForm(self.request.GET)
+        tracks = LearningTrack.objects.filter(is_published=True).select_related("instructor")
+        return filter_tracks(tracks, self.search)
 
     def get_context_data(self, **kwargs):
         active = self.request.user.enrollments.filter(status=Enrollment.Status.ACTIVE)
-        return super().get_context_data(enrolled_ids=set(active.values_list("track_id", flat=True)), **kwargs)
+        enrolled_ids = set(active.values_list("track_id", flat=True))
+        return super().get_context_data(enrolled_ids=enrolled_ids, search=self.search, **kwargs)
 
 
 class CatalogDetailView(StudentMixin, DetailView):
@@ -34,8 +38,9 @@ class CatalogDetailView(StudentMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         enrolled = self.object.enrollments.filter(student=self.request.user, status=Enrollment.Status.ACTIVE).exists()
-        activities = self.object.activities.filter(is_published=True) if enrolled else []
-        return super().get_context_data(enrolled=enrolled, activities=activities, **kwargs)
+        search = SearchForm(self.request.GET)
+        activities = filter_activities(self.object.activities.filter(is_published=True), search) if enrolled else []
+        return super().get_context_data(enrolled=enrolled, activities=activities, search=search, **kwargs)
 
 
 class EnrollView(StudentMixin, View):
@@ -71,3 +76,6 @@ class StudentActivityView(StudentMixin, DetailView):
             track__enrollments__student=self.request.user,
             track__enrollments__status=Enrollment.Status.ACTIVE,
         )
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(samples=self.object.test_cases.filter(is_sample=True), **kwargs)
