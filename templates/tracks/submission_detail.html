@@ -32,6 +32,18 @@
 </div>
 {% endfor %}
 
+<h2>Reflection</h2>
+<div class="card">
+  {% if submission.reflection %}
+  <p>{{ submission.reflection.content|linebreaksbr }}</p>
+  {% if user.role == "STUDENT" %}<div class="actions"><a class="btn secondary sm" href="{% url 'reflection_update' submission.reflection.pk %}">Edit</a></div>{% endif %}
+  {% elif user.role == "STUDENT" %}
+  <div class="head"><p class="muted">What did you learn from this attempt?</p><a class="btn" href="{% url 'reflection_create' submission.pk %}">Write a reflection</a></div>
+  {% else %}
+  <p class="muted empty">No reflection yet.</p>
+  {% endif %}
+</div>
+
 <h2>Peer reviews</h2>
 {% for r in reviews %}
 <div class="card">

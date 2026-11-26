@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import PeerReview
+from .models import PeerReview, Reflection
 
 RATINGS = [(n, str(n)) for n in range(1, 6)]
 
@@ -16,3 +16,12 @@ class PeerReviewForm(forms.ModelForm):
             "comment": forms.Textarea(attrs={"rows": 4}),
         }
         help_texts = {"comment": "At least 20 characters."}
+
+
+class ReflectionForm(forms.ModelForm):
+    class Meta:
+        model = Reflection
+        fields = ("content",)
+        labels = {"content": "What did you learn?"}
+        widgets = {"content": forms.Textarea(attrs={"rows": 4})}
+        help_texts = {"content": "At least 50 characters."}
