@@ -6,7 +6,7 @@ from accounts.models import User
 from tracks.models import Activity, Enrollment, LearningTrack, Submission
 from tracks.tests import make_user
 
-from .models import PeerReview
+from .models import PeerReview, Reflection
 
 def submit(enrollment, activity, verdict="ACCEPTED"):
     attempt = Submission.objects.filter(enrollment=enrollment, activity=activity).count() + 1
@@ -95,3 +95,60 @@ class PeerReviewTests(TestCase):
     def test_activity_page_lists_solutions_to_review(self):
         response = self.client.get(reverse("student_activity", args=[self.activity.pk]))
         self.assertEqual([s for s, _ in response.context["to_review"]], [self.accepted])
+
+
+TEXT = "I learned to read both numbers from one line and to test negative inputs."
+
+
+class ReflectionTests(TestCase):
+    def setUp(self):
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=self.sir, title="Python Basics", is_published=True)
+        activity = Activity.objects.create(track=track, title="Sum", instructions="Add", difficulty="EASY",
+                                           language="PYTHON", is_published=True)
+        self.ana = make_user("ana", User.Role.STUDENT)
+        self.submission = submit(Enrollment.objects.create(student=self.ana, track=track), activity, verdict="WRONG_ANSWER")
+        self.url = reverse("reflection_create", args=[self.submission.pk])
+        self.detail = reverse("submission_detail", args=[self.submission.pk])
+        self.client.force_login(self.ana)
+
+    def test_create_read_update_delete_reflection(self):
+        response = self.client.post(self.url, {"content": TEXT})
+        self.assertRedirects(response, self.detail)
+        reflection = Reflection.objects.get()
+        self.assertEqual(reflection.submission, self.submission)
+        self.assertContains(self.client.get(self.detail), "negative inputs")
+
+        self.client.force_login(self.sir)
+        self.assertContains(self.client.get(self.detail), "negative inputs")
+
+        self.client.force_login(self.ana)
+        self.client.post(reverse("reflection_update", args=[reflection.pk]), {"content": TEXT + " Also edge cases."})
+        reflection.refresh_from_db()
+        self.assertTrue(reflection.content.endswith("edge cases."))
+        self.client.post(reverse("reflection_delete", args=[reflection.pk]))
+        self.assertFalse(Reflection.objects.exists())
+
+    def test_content_must_be_at_least_50_characters(self):
+        errors = self.client.post(self.url, {"content": "Too short."}).context["form"].errors
+        self.assertIn("content", errors)
+        self.assertFalse(Reflection.objects.exists())
+
+    def test_only_one_reflection_per_submission(self):
+        self.client.post(self.url, {"content": TEXT})
+        response = self.client.post(self.url, {"content": TEXT + " again"})
+        self.assertRedirects(response, reverse("reflection_update", args=[Reflection.objects.get().pk]))
+        self.assertEqual(Reflection.objects.count(), 1)
+
+    def test_only_the_submitter_can_write_or_change_it(self):
+        self.client.post(self.url, {"content": TEXT})
+        reflection = Reflection.objects.get()
+        self.client.force_login(make_user("ben", User.Role.STUDENT))
+        self.assertEqual(self.client.post(self.url, {"content": TEXT}).status_code, 404)
+        self.assertEqual(self.client.post(reverse("reflection_update", args=[reflection.pk]), {"content": TEXT}).status_code, 404)
+        self.assertEqual(self.client.post(reverse("reflection_delete", args=[reflection.pk])).status_code, 404)
+        self.client.force_login(self.sir)
+        self.assertEqual(self.client.post(self.url, {"content": TEXT}).status_code, 403)
+        self.client.logout()
+        self.assertRedirects(self.client.get(self.url), f"{reverse('login')}?next={self.url}")
+        self.assertEqual(Reflection.objects.get().content, TEXT)
