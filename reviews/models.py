@@ -33,3 +33,19 @@ class PeerReview(models.Model):
 
     def __str__(self):
         return f"Review of {self.submission}"
+
+
+class Reflection(models.Model):
+    submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name="reflection")
+    content = models.TextField(validators=[MinLengthValidator(50)])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "reflections"
+        constraints = [
+            models.CheckConstraint(condition=Q(GreaterThanOrEqual(Length("content"), 50)), name="reflections_content_length_check"),
+        ]
+
+    def __str__(self):
+        return f"Reflection on {self.submission}"
