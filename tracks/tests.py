@@ -234,3 +234,50 @@ class TestCaseTests(TestCase):
         response = self.client.get(reverse("student_activity", args=[self.activity.pk]))
         self.assertContains(response, "SAMPLE-OUT")
         self.assertNotContains(response, "HIDDEN-OUT")
+
+
+class SearchTests(TestCase):
+    def setUp(self):
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        self.python = LearningTrack.objects.create(instructor=self.sir, title="Python Basics", description="Loops", is_published=True)
+        self.java = LearningTrack.objects.create(instructor=self.sir, title="Java Intro", is_published=True)
+        self.draft = LearningTrack.objects.create(instructor=self.sir, title="Draft C", is_published=False)
+        Activity.objects.create(track=self.python, is_published=True, **activity_data())
+        Activity.objects.create(track=self.python, is_published=True, **activity_data(title="Hard one", difficulty="HARD"))
+        Activity.objects.create(track=self.java, is_published=True, **activity_data(title="Hello Java", language="JAVA"))
+        self.student = make_user("ana", User.Role.STUDENT)
+
+    def titles(self, response, key):
+        return {str(item) for item in response.context[key]}
+
+    def test_student_searches_and_filters_tracks(self):
+        self.client.force_login(self.student)
+        url = reverse("catalog")
+        self.assertEqual(self.titles(self.client.get(url, {"q": "loops"}), "tracks"), {"Python Basics"})
+        self.assertEqual(self.titles(self.client.get(url, {"language": "JAVA"}), "tracks"), {"Java Intro"})
+        self.assertContains(self.client.get(url, {"q": "nothing-like-this"}), "No tracks match.")
+        self.assertNotIn("Draft C", self.titles(self.client.get(url, {"q": "draft"}), "tracks"))
+
+    def test_student_filters_activities_in_an_enrolled_track(self):
+        Enrollment.objects.create(student=self.student, track=self.python)
+        self.client.force_login(self.student)
+        response = self.client.get(reverse("catalog_detail", args=[self.python.pk]), {"difficulty": "HARD"})
+        self.assertEqual(self.titles(response, "activities"), {"Hard one"})
+
+    def test_instructor_filters_own_tracks_and_activities(self):
+        self.client.force_login(self.sir)
+        drafts = self.client.get(reverse("track_list"), {"status": "draft"})
+        self.assertEqual(self.titles(drafts, "tracks"), {"Draft C"})
+        detail = self.client.get(reverse("track_detail", args=[self.python.pk]), {"q": "hard"})
+        self.assertEqual(self.titles(detail, "activities"), {"Hard one"})
+
+    def test_invalid_filter_shows_error_and_does_not_crash(self):
+        self.client.force_login(self.student)
+        response = self.client.get(reverse("catalog"), {"language": "COBOL"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "That filter isn")
+        self.assertEqual(len(response.context["tracks"]), 2)
+
+    def test_search_requires_login(self):
+        url = reverse("catalog")
+        self.assertRedirects(self.client.get(url, {"q": "x"}), f"{reverse('login')}?next={url}%3Fq%3Dx")

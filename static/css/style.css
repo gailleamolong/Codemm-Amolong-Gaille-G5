@@ -81,6 +81,11 @@ form.stack { display: flex; flex-direction: column; gap: 16px; }
 .msg { padding: 10px 14px; border-radius: 8px; background: var(--green-soft); color: var(--green); font-weight: 600; font-size: 14px; }
 .msg.error { background: var(--red-soft); color: var(--red); }
 
+/* Search */
+.search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.search input, .search select { height: 34px; padding: 0 10px; border: 1px solid var(--ctl); border-radius: 8px; background: #fff; }
+.search input { flex: 1; min-width: 160px; }
+
 /* Tables and lists */
 .list { list-style: none; margin: 0; padding: 0; }
 .list li { padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -113,6 +118,7 @@ tr:last-child td { border-bottom: none; }
   .side nav { order: 3; width: 100%; display: flex; gap: 4px; }
   .page { padding: 24px 16px; }
   .row2 { grid-template-columns: 1fr; }
+  .search input { flex-basis: 100%; }
   table, tbody, tr, td { display: block; }
   thead { display: none; }
   tr { padding: 12px 0; border-bottom: 1px solid var(--line); }

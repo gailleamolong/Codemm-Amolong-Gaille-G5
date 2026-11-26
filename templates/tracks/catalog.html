@@ -2,6 +2,7 @@
 {% block title %}Browse tracks{% endblock %}
 {% block content %}
 <h1>Browse tracks</h1>
+{% include "includes/search.html" with show_q=True show_language=True %}
 <div class="card">
   {% if tracks %}
   <ul class="list">
@@ -10,7 +11,7 @@
     {% endfor %}
   </ul>
   {% else %}
-  <p class="muted empty">No tracks are open yet.</p>
+  <p class="muted empty">{% if request.GET %}No tracks match.{% else %}No tracks are open yet.{% endif %}</p>
   {% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,9 @@
+<form method="get" class="search" role="search">
+  {% if show_q %}<label class="sr-only" for="id_q">Search</label><input type="search" id="id_q" name="q" value="{{ search.data.q|default:'' }}" placeholder="Search">{% endif %}
+  {% if show_difficulty %}<label class="sr-only" for="id_difficulty">Difficulty</label>{{ search.difficulty }}{% endif %}
+  {% if show_language %}<label class="sr-only" for="id_language">Language</label>{{ search.language }}{% endif %}
+  {% if show_status %}<label class="sr-only" for="id_status">Status</label>{{ search.status }}{% endif %}
+  <button type="submit" class="btn secondary sm">Search</button>
+  {% if request.GET %}<a class="btn secondary sm" href="{{ request.path }}">Clear</a>{% endif %}
+</form>
+{% if search.errors %}<p class="msg error">That filter isn't valid. Pick one from the list.</p>{% endif %}

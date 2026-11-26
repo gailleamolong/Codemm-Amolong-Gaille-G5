@@ -5,6 +5,7 @@
   <h1>My tracks</h1>
   <a class="btn" href="{% url 'track_create' %}">New track</a>
 </div>
+{% include "includes/search.html" with show_q=True show_status=True %}
 <div class="card table-wrap">
   {% if tracks %}
   <table>
@@ -20,7 +21,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="muted empty">No tracks yet.</p>
+  <p class="muted empty">{% if request.GET %}No tracks match.{% else %}No tracks yet.{% endif %}</p>
   {% endif %}
 </div>
 {% endblock %}

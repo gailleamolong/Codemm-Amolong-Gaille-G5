@@ -7,7 +7,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 from accounts.models import User
 from dashboard.views import RoleRequiredMixin
 
-from .forms import ActivityForm, TestCaseForm, TrackForm
+from .forms import ActivityForm, SearchForm, TestCaseForm, TrackForm, filter_activities, filter_tracks
 from .models import Activity, LearningTrack, TestCase
 
 
@@ -27,12 +27,21 @@ class TrackListView(OwnTrackMixin, ListView):
     context_object_name = "tracks"
 
     def get_queryset(self):
-        return super().get_queryset().prefetch_related("activities")
+        self.search = SearchForm(self.request.GET)
+        return filter_tracks(super().get_queryset(), self.search).prefetch_related("activities")
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(search=self.search, **kwargs)
 
 
 class TrackDetailView(OwnTrackMixin, DetailView):
     template_name = "tracks/track_detail.html"
     context_object_name = "track"
+
+    def get_context_data(self, **kwargs):
+        search = SearchForm(self.request.GET)
+        activities = filter_activities(self.object.activities.all(), search)
+        return super().get_context_data(search=search, activities=activities, **kwargs)
 
 
 class TrackCreateView(InstructorMixin, SuccessMessageMixin, CreateView):
