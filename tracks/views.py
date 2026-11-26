@@ -8,7 +8,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 from accounts.models import User
 from dashboard.views import RoleRequiredMixin
 
-from .forms import ActivityForm, SearchForm, TestCaseForm, TrackForm, filter_activities, filter_tracks
+from .forms import ActivityForm, SearchForm, TestCaseForm, TrackForm, filter_activities, filter_submissions, filter_tracks
 from .models import Activity, LearningTrack, Submission, TestCase
 
 
@@ -111,6 +111,11 @@ class ActivityCreateView(InstructorMixin, SuccessMessageMixin, CreateView):
 class ActivityDetailView(OwnActivityMixin, DetailView):
     template_name = "tracks/activity_detail.html"
     context_object_name = "activity"
+
+    def get_context_data(self, **kwargs):
+        search = SearchForm(self.request.GET)
+        submissions = self.object.submissions.select_related("enrollment__student")
+        return super().get_context_data(search=search, submissions=filter_submissions(submissions, search), **kwargs)
 
 
 class ActivityUpdateView(OwnActivityMixin, SuccessMessageMixin, UpdateView):
