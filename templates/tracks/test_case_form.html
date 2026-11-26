@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit test case{% else %}New test case{% endif %}{% endblock %}
+{% block content %}
+<h1>{% if object %}Edit test {{ object.seq_no }}{% else %}New test case{% endif %} · {{ activity.title }}</h1>
+<div class="card">
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    <div class="row2">
+      {% include "includes/field.html" with field=form.seq_no %}
+      {% include "includes/field.html" with field=form.points %}
+    </div>
+    {% include "includes/field.html" with field=form.input_data %}
+    {% include "includes/field.html" with field=form.expected_output %}
+    <label class="check">{{ form.is_sample }} Visible sample (students can see it)</label>
+    <div class="actions">
+      <button type="submit" class="btn">Save</button>
+      <a class="btn secondary" href="{% url 'activity_detail' activity.pk %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

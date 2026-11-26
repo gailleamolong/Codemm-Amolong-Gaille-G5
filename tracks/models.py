@@ -80,3 +80,24 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f"{self.student} in {self.track}"
+
+
+class TestCase(models.Model):
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name="test_cases")
+    seq_no = models.SmallIntegerField("number", validators=[MinValueValidator(1)])
+    input_data = models.TextField("input", blank=True, default="")
+    expected_output = models.TextField()
+    is_sample = models.BooleanField("visible sample", default=False)
+    points = models.SmallIntegerField(default=1, validators=[MinValueValidator(1)])
+
+    class Meta:
+        db_table = "test_cases"
+        ordering = ["seq_no"]
+        constraints = [
+            models.UniqueConstraint(fields=["activity", "seq_no"], name="unique_test_case_number_per_activity"),
+            models.CheckConstraint(condition=Q(seq_no__gte=1), name="test_cases_seq_no_check"),
+            models.CheckConstraint(condition=Q(points__gte=1), name="test_cases_points_check"),
+        ]
+
+    def __str__(self):
+        return f"Test {self.seq_no}"

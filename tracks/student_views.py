@@ -71,3 +71,6 @@ class StudentActivityView(StudentMixin, DetailView):
             track__enrollments__student=self.request.user,
             track__enrollments__status=Enrollment.Status.ACTIVE,
         )
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(samples=self.object.test_cases.filter(is_sample=True), **kwargs)

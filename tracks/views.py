@@ -1,14 +1,14 @@
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from accounts.models import User
 from dashboard.views import RoleRequiredMixin
 
-from .forms import ActivityForm, TrackForm
-from .models import Activity, LearningTrack
+from .forms import ActivityForm, TestCaseForm, TrackForm
+from .models import Activity, LearningTrack, TestCase
 
 
 class InstructorMixin(RoleRequiredMixin):
@@ -87,7 +87,9 @@ class ActivityCreateView(InstructorMixin, SuccessMessageMixin, CreateView):
         return kwargs
 
     def get_context_data(self, **kwargs):
-        return super().get_context_data(track=self.track, **kwargs)
+        context = super().get_context_data(**kwargs)
+        context["track"] = self.track
+        return context
 
     def get_success_url(self):
         return reverse("track_detail", args=[self.track.pk])
@@ -112,4 +114,55 @@ class ActivityDeleteView(OwnActivityMixin, DeleteView):
 
     def form_valid(self, form):
         messages.success(self.request, f"Deleted {self.object.title}.")
+        return super().form_valid(form)
+
+
+class OwnTestCaseMixin(InstructorMixin):
+    def get_queryset(self):
+        return TestCase.objects.filter(activity__track__instructor=self.request.user)
+
+    def get_success_url(self):
+        return reverse("activity_detail", args=[self.object.activity_id])
+
+
+class TestCaseCreateView(InstructorMixin, SuccessMessageMixin, CreateView):
+    form_class = TestCaseForm
+    template_name = "tracks/test_case_form.html"
+    success_message = "Test case added."
+
+    def get_form_kwargs(self):
+        self.activity = get_object_or_404(
+            Activity, pk=self.kwargs["activity_pk"], track__instructor=self.request.user
+        )
+        kwargs = super().get_form_kwargs()
+        kwargs["instance"] = TestCase(activity=self.activity)
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["activity"] = self.activity
+        return context
+
+    def get_success_url(self):
+        return reverse("activity_detail", args=[self.activity.pk])
+
+
+class TestCaseUpdateView(OwnTestCaseMixin, SuccessMessageMixin, UpdateView):
+    form_class = TestCaseForm
+    template_name = "tracks/test_case_form.html"
+    success_message = "Test case saved."
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(activity=self.object.activity, **kwargs)
+
+
+class TestCaseDeleteView(OwnTestCaseMixin, DeleteView):
+    template_name = "tracks/confirm_delete.html"
+
+    def form_valid(self, form):
+        activity = self.object.activity
+        if activity.is_published and activity.test_cases.count() == 1:
+            messages.error(self.request, "Unpublish the activity or add another test case first.")
+            return redirect("activity_detail", pk=activity.pk)
+        messages.success(self.request, "Test case deleted.")
         return super().form_valid(form)

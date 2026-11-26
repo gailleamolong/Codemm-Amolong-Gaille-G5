@@ -5,6 +5,7 @@ from django.urls import reverse
 from accounts.models import User
 
 from .models import Activity, Enrollment, LearningTrack
+from .models import TestCase as ActivityTest
 
 
 def make_user(username, role):
@@ -49,6 +50,7 @@ class TrackCrudTests(TestCase):
 
     def test_activity_crud_and_validation(self):
         track = LearningTrack.objects.create(instructor=self.instructor, title="Python Basics")
+        self.assertContains(self.client.get(reverse("activity_create", args=[track.pk])), "New activity in Python Basics")
         self.client.post(reverse("activity_create", args=[track.pk]), activity_data())
         activity = Activity.objects.get()
         self.assertEqual(activity.track, track)
@@ -148,3 +150,87 @@ class EnrollmentTests(TestCase):
         self.client.force_login(self.instructor)
         self.assertContains(self.client.get(reverse("track_detail", args=[self.track.pk])), "Ana Tester")
         self.assertEqual(self.client.post(reverse("enroll", args=[self.track.pk])).status_code, 403)
+
+
+class TestCaseTests(TestCase):
+    def setUp(self):
+        self.instructor = make_user("sir", User.Role.INSTRUCTOR)
+        self.track = LearningTrack.objects.create(instructor=self.instructor, title="Python Basics", is_published=True)
+        self.activity = Activity.objects.create(track=self.track, **activity_data())
+        self.client.force_login(self.instructor)
+
+    def add(self, **overrides):
+        data = {"seq_no": 1, "input_data": "2 3", "expected_output": "5", "points": 1}
+        data.update(overrides)
+        return self.client.post(reverse("test_case_create", args=[self.activity.pk]), data)
+
+    def test_create_edit_delete(self):
+        response = self.add(is_sample="on")
+        self.assertRedirects(response, reverse("activity_detail", args=[self.activity.pk]))
+        test = self.activity.test_cases.get()
+        self.assertTrue(test.is_sample)
+        self.assertContains(self.client.get(reverse("activity_detail", args=[self.activity.pk])), "Test 1")
+
+        self.client.post(reverse("test_case_update", args=[test.pk]),
+                         {"seq_no": 1, "input_data": "4 4", "expected_output": "8", "points": 2})
+        test.refresh_from_db()
+        self.assertEqual((test.expected_output, test.points, test.is_sample), ("8", 2, False))
+
+        self.client.post(reverse("test_case_delete", args=[test.pk]))
+        self.assertFalse(self.activity.test_cases.exists())
+
+    def test_next_number_is_suggested(self):
+        self.add()
+        response = self.client.get(reverse("test_case_create", args=[self.activity.pk]))
+        self.assertEqual(response.context["form"].initial["seq_no"], 2)
+
+    def test_invalid_input(self):
+        self.add()
+        errors = self.add(expected_output="", points=0).context["form"].errors
+        self.assertEqual(set(errors), {"seq_no", "expected_output", "points"})
+        self.assertEqual(self.activity.test_cases.count(), 1)
+
+    def test_login_required(self):
+        self.client.logout()
+        url = reverse("test_case_create", args=[self.activity.pk])
+        self.assertRedirects(self.client.get(url), f"{reverse('login')}?next={url}")
+
+    def test_other_instructor_and_students_are_blocked(self):
+        test = ActivityTest.objects.create(activity=self.activity, seq_no=1, expected_output="5")
+        self.client.force_login(make_user("other", User.Role.INSTRUCTOR))
+        self.assertEqual(self.add().status_code, 404)
+        self.assertEqual(self.client.post(reverse("test_case_update", args=[test.pk]), {}).status_code, 404)
+        self.assertEqual(self.client.post(reverse("test_case_delete", args=[test.pk])).status_code, 404)
+        self.client.force_login(make_user("stud", User.Role.STUDENT))
+        self.assertEqual(self.add().status_code, 403)
+        self.assertTrue(ActivityTest.objects.filter(pk=test.pk).exists())
+
+    def test_publishing_needs_a_test_case(self):
+        url = reverse("activity_update", args=[self.activity.pk])
+        errors = self.client.post(url, activity_data(is_published="on")).context["form"].errors
+        self.assertEqual(errors["is_published"], ["Add at least one test case before publishing."])
+        new = self.client.post(reverse("activity_create", args=[self.track.pk]), activity_data(title="New", is_published="on"))
+        self.assertIn("is_published", new.context["form"].errors)
+
+        self.add()
+        self.client.post(url, activity_data(is_published="on"))
+        self.activity.refresh_from_db()
+        self.assertTrue(self.activity.is_published)
+
+    def test_cannot_delete_last_test_case_of_published_activity(self):
+        test = ActivityTest.objects.create(activity=self.activity, seq_no=1, expected_output="5")
+        Activity.objects.filter(pk=self.activity.pk).update(is_published=True)
+        response = self.client.post(reverse("test_case_delete", args=[test.pk]), follow=True)
+        self.assertContains(response, "Unpublish the activity or add another test case first.")
+        self.assertTrue(ActivityTest.objects.filter(pk=test.pk).exists())
+
+    def test_students_see_samples_but_never_hidden_tests(self):
+        ActivityTest.objects.create(activity=self.activity, seq_no=1, input_data="1 1", expected_output="SAMPLE-OUT", is_sample=True)
+        ActivityTest.objects.create(activity=self.activity, seq_no=2, input_data="9 9", expected_output="HIDDEN-OUT")
+        Activity.objects.filter(pk=self.activity.pk).update(is_published=True)
+        student = make_user("ana", User.Role.STUDENT)
+        Enrollment.objects.create(student=student, track=self.track)
+        self.client.force_login(student)
+        response = self.client.get(reverse("student_activity", args=[self.activity.pk]))
+        self.assertContains(response, "SAMPLE-OUT")
+        self.assertNotContains(response, "HIDDEN-OUT")
