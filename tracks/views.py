@@ -2,13 +2,14 @@ from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from accounts.models import User
 from dashboard.views import RoleRequiredMixin
 
-from .forms import ActivityForm, SearchForm, TestCaseForm, TrackForm, filter_activities, filter_tracks
-from .models import Activity, LearningTrack, TestCase
+from .forms import ActivityForm, SearchForm, TestCaseForm, TrackForm, filter_activities, filter_submissions, filter_tracks
+from .models import Activity, LearningTrack, Submission, TestCase
 
 
 class InstructorMixin(RoleRequiredMixin):
@@ -72,6 +73,9 @@ class TrackDeleteView(OwnTrackMixin, DeleteView):
     success_url = reverse_lazy("track_list")
 
     def form_valid(self, form):
+        if Submission.objects.filter(activity__track=self.object).exists():
+            messages.error(self.request, "This track has submissions, so it can't be deleted. Unpublish it instead.")
+            return redirect("track_detail", pk=self.object.pk)
         messages.success(self.request, f"Deleted {self.object.title}.")
         return super().form_valid(form)
 
@@ -108,6 +112,11 @@ class ActivityDetailView(OwnActivityMixin, DetailView):
     template_name = "tracks/activity_detail.html"
     context_object_name = "activity"
 
+    def get_context_data(self, **kwargs):
+        search = SearchForm(self.request.GET)
+        submissions = self.object.submissions.select_related("enrollment__student")
+        return super().get_context_data(search=search, submissions=filter_submissions(submissions, search), **kwargs)
+
 
 class ActivityUpdateView(OwnActivityMixin, SuccessMessageMixin, UpdateView):
     form_class = ActivityForm
@@ -122,6 +131,9 @@ class ActivityDeleteView(OwnActivityMixin, DeleteView):
     template_name = "tracks/confirm_delete.html"
 
     def form_valid(self, form):
+        if self.object.submissions.exists():
+            messages.error(self.request, "This activity has submissions, so it can't be deleted. Unpublish it instead.")
+            return redirect("activity_detail", pk=self.object.pk)
         messages.success(self.request, f"Deleted {self.object.title}.")
         return super().form_valid(form)
 
@@ -170,8 +182,31 @@ class TestCaseDeleteView(OwnTestCaseMixin, DeleteView):
 
     def form_valid(self, form):
         activity = self.object.activity
+        if self.object.results.exists():
+            messages.error(self.request, "This test case already has results, so it can't be deleted.")
+            return redirect("activity_detail", pk=activity.pk)
         if activity.is_published and activity.test_cases.count() == 1:
             messages.error(self.request, "Unpublish the activity or add another test case first.")
             return redirect("activity_detail", pk=activity.pk)
         messages.success(self.request, "Test case deleted.")
         return super().form_valid(form)
+
+
+class SubmissionDetailView(LoginRequiredMixin, DetailView):
+    """Students see their own attempts; instructors see attempts on their own activities."""
+
+    template_name = "tracks/submission_detail.html"
+    context_object_name = "submission"
+
+    def get_queryset(self):
+        submissions = Submission.objects.select_related("activity__track", "enrollment__student")
+        user = self.request.user
+        if user.role == User.Role.STUDENT:
+            return submissions.filter(enrollment__student=user)
+        if user.role == User.Role.INSTRUCTOR:
+            return submissions.filter(activity__track__instructor=user)
+        return submissions.none()
+
+    def get_context_data(self, **kwargs):
+        results = self.object.results.select_related("test_case")
+        return super().get_context_data(results=results, **kwargs)

@@ -19,23 +19,37 @@ described in the Software Design Document (SDD).
 
 Instructors organize practice into learning tracks of coding activities, each with its own test
 cases, and students enroll to work through them. This follows SDD features F-02 (tracks),
-F-03 (activities), F-04 (test cases), F-05 (enrollment) and F-08 (search and filtering).
+F-03 (activities), F-04 (test cases), F-05 (enrollment), F-06 and F-07 (code editor, Run,
+Submit and automatic checking) and F-08 (search and filtering).
 
 | Role | What they can do |
 |---|---|
-| Instructor | Create, view, edit and delete their own tracks, the coding activities inside them, and each activity's test cases (visible samples or hidden). Publish tracks and activities. See who is enrolled. Search their tracks and filter by status; filter a track's activities. |
-| Student | Search and filter published tracks, enroll, drop and rejoin. Open a track's published activities while enrolled and see the sample test cases (never the hidden ones). Enrolled tracks show on the dashboard. |
+| Instructor | Create, view, edit and delete their own tracks, the coding activities inside them, and each activity's test cases (visible samples or hidden). Publish tracks and activities. See who is enrolled. See every submission on their activities, with full test results, and filter by student and verdict. Search their tracks and filter by status; filter a track's activities. |
+| Student | Search and filter published tracks, enroll, drop and rejoin. Open a track's published activities while enrolled and see the sample test cases (never the hidden ones). Write code, Run it with their own input, and Submit it to be checked against every test case. See the verdict, score and results (hidden tests show only pass or fail). Enrolled tracks and recent attempts show on the dashboard. |
 | Administrator | Manage user accounts and roles. |
 
-Tables (from the SDD data dictionary): `learning_tracks`, `activities`, `test_cases`, `enrollments`.
+Tables (from the SDD data dictionary): `learning_tracks`, `activities`, `test_cases`, `enrollments`,
+`submissions`, `test_results`.
 The database enforces a unique track title per instructor, a unique activity title per track,
 a unique test case number per activity with at least 1 point, one enrollment per student per
 track, and the allowed difficulty, language, time limit (500 to 10,000 ms) and attempt limit
 (1 to 50). An activity can only be published once it has a test case. Instructors can only reach
 their own tracks; other instructors get 404 and students get 403.
 
-Not built yet (SDD): code editor and submissions with Judge0 checking, peer reviews, reflections,
-and the reports.
+Submissions follow the SDD rules: an active enrollment, the attempt limit, the due date, 1 to
+65,535 characters of code, a verdict of Accepted only when every test passes, and a score weighted
+by test case points. Tracks, activities and test cases that have submissions can't be deleted.
+
+### Code checking (Judge0)
+
+Code runs on [Judge0](https://judge0.com), never on the Codemm server. It is off by default:
+with `JUDGE0_URL` empty in `.env`, Run and Submit are closed and no code leaves the server.
+To turn it on, set `JUDGE0_URL` to a Judge0 server, for example the public
+`https://ce.judge0.com` for demos (rate-limited and run by a third party, so don't put private
+data in test cases) or your own Judge0 on a Linux server. The automated tests replace Judge0
+with a stand-in and never call the network.
+
+Not built yet (SDD): peer reviews, reflections, and the reports.
 
 ## Account Feature (Project Development 1)
 

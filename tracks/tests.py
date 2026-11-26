@@ -1,10 +1,16 @@
 from django.contrib.messages import get_messages
-from django.test import TestCase
+from datetime import timedelta
+from unittest import mock
+
+from django.test import TestCase, override_settings
+from django.utils import timezone
 from django.urls import reverse
 
 from accounts.models import User
 
-from .models import Activity, Enrollment, LearningTrack
+from . import judge0
+from .grading import same_output
+from .models import Activity, Enrollment, LearningTrack, Submission
 from .models import TestCase as ActivityTest
 
 
@@ -281,3 +287,226 @@ class SearchTests(TestCase):
     def test_search_requires_login(self):
         url = reverse("catalog")
         self.assertRedirects(self.client.get(url, {"q": "x"}), f"{reverse('login')}?next={url}%3Fq%3Dx")
+
+
+def outcome(status=judge0.ACCEPTED, stdout="", error="", time_ms=12):
+    return {"status": status, "stdout": stdout, "error": error, "time_ms": time_ms}
+
+
+@override_settings(JUDGE0_URL="http://judge0.test")
+class SubmissionTests(TestCase):
+    def setUp(self):
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        self.track = LearningTrack.objects.create(instructor=self.sir, title="Python Basics", is_published=True)
+        self.activity = Activity.objects.create(track=self.track, is_published=True, **activity_data(max_attempts=3))
+        self.sample = ActivityTest.objects.create(activity=self.activity, seq_no=1, input_data="2 3", expected_output="5", is_sample=True)
+        self.hidden = ActivityTest.objects.create(activity=self.activity, seq_no=2, input_data="9 9", expected_output="SECRET-18", points=3)
+        self.student = make_user("ana", User.Role.STUDENT)
+        self.enrollment = Enrollment.objects.create(student=self.student, track=self.track)
+        self.client.force_login(self.student)
+        self.url = reverse("student_activity", args=[self.activity.pk])
+
+    def submit(self, outcomes, code="a, b = map(int, input().split())\nprint(a + b)"):
+        with mock.patch("tracks.judge0.run", side_effect=outcomes) as run:
+            response = self.client.post(self.url, {"source_code": code})
+        return response, run
+
+    def test_accepted_submission_is_saved_with_results(self):
+        response, run = self.submit([outcome(stdout="5\n"), outcome(stdout="SECRET-18")])
+        submission = Submission.objects.get()
+        self.assertRedirects(response, reverse("submission_detail", args=[submission.pk]))
+        self.assertEqual((submission.verdict, submission.score, submission.passed_count, submission.attempt_no),
+                         ("ACCEPTED", 100, 2, 1))
+        self.assertEqual(submission.results.count(), 2)
+        self.assertEqual(run.call_args_list[0].args, ("PYTHON", mock.ANY, "2 3", 2000))
+
+    def test_partial_score_is_weighted_by_points(self):
+        self.submit([outcome(stdout="5"), outcome(stdout="wrong")])
+        submission = Submission.objects.get()
+        self.assertEqual((submission.verdict, submission.score), ("WRONG_ANSWER", 25))
+
+    def test_compilation_and_runtime_errors(self):
+        self.submit([outcome(status=judge0.COMPILE_ERROR, error="SyntaxError")])
+        self.submit([outcome(stdout="5"), outcome(status=7, error="ZeroDivisionError")])
+        first, second = Submission.objects.order_by("attempt_no")
+        self.assertEqual((first.verdict, first.score, first.results.count()), ("COMPILATION_ERROR", 0, 2))
+        self.assertEqual((second.verdict, second.attempt_no), ("RUNTIME_ERROR", 2))
+
+    def test_empty_code_is_rejected(self):
+        response, run = self.submit([], code="   ")
+        self.assertContains(response, "Write some code before submitting.")
+        run.assert_not_called()
+        self.assertFalse(Submission.objects.exists())
+
+    def test_checker_failure_saves_nothing(self):
+        response, _ = self.submit(judge0.Judge0Error("The code checker couldn't be reached. Try again in a minute."))
+        self.assertContains(response, "couldn")
+        self.assertFalse(Submission.objects.exists())
+
+    @override_settings(JUDGE0_URL="")
+    def test_submissions_closed_when_checker_is_off(self):
+        self.assertContains(self.client.get(self.url), "Code checking isn")
+        response, run = self.submit([outcome()])
+        run.assert_not_called()
+        self.assertFalse(Submission.objects.exists())
+
+    def test_attempt_limit_and_due_date(self):
+        Activity.objects.filter(pk=self.activity.pk).update(max_attempts=1)
+        self.submit([outcome(stdout="5"), outcome(stdout="SECRET-18")])
+        response, run = self.submit([outcome()])
+        self.assertContains(response, "used all your attempts")
+        Activity.objects.filter(pk=self.activity.pk).update(max_attempts=5, due_at=timezone.now() - timedelta(hours=1))
+        response, run = self.submit([outcome()])
+        self.assertContains(response, "due date has passed")
+        run.assert_not_called()
+        self.assertEqual(Submission.objects.count(), 1)
+
+    def test_must_be_actively_enrolled_and_logged_in(self):
+        self.enrollment.status = Enrollment.Status.DROPPED
+        self.enrollment.save()
+        response, run = self.submit([outcome()])
+        self.assertEqual(response.status_code, 404)
+        self.client.logout()
+        self.assertRedirects(self.client.get(self.url), f"{reverse('login')}?next={self.url}")
+
+    def test_hidden_test_details_stay_hidden_from_students(self):
+        self.submit([outcome(stdout="5"), outcome(stdout="my-hidden-output")])
+        detail = reverse("submission_detail", args=[Submission.objects.get().pk])
+        student_view = self.client.get(detail)
+        self.assertContains(student_view, "Hidden test 2")
+        self.assertNotContains(student_view, "SECRET-18")
+        self.assertNotContains(student_view, "my-hidden-output")
+        self.client.force_login(self.sir)
+        self.assertContains(self.client.get(detail), "SECRET-18")
+
+    def test_others_cannot_open_a_submission(self):
+        self.submit([outcome(stdout="5"), outcome(stdout="SECRET-18")])
+        detail = reverse("submission_detail", args=[Submission.objects.get().pk])
+        for other in (make_user("ben", User.Role.STUDENT), make_user("other", User.Role.INSTRUCTOR)):
+            self.client.force_login(other)
+            self.assertEqual(self.client.get(detail).status_code, 404)
+
+    def test_records_with_submissions_cannot_be_deleted(self):
+        self.submit([outcome(stdout="5"), outcome(stdout="SECRET-18")])
+        self.client.force_login(self.sir)
+        self.client.post(reverse("test_case_delete", args=[self.hidden.pk]))
+        self.client.post(reverse("activity_delete", args=[self.activity.pk]))
+        response = self.client.post(reverse("track_delete", args=[self.track.pk]), follow=True)
+        self.assertContains(response, "Unpublish it instead")
+        self.assertTrue(ActivityTest.objects.filter(pk=self.hidden.pk).exists())
+        self.assertTrue(Activity.objects.filter(pk=self.activity.pk).exists())
+        self.assertTrue(LearningTrack.objects.filter(pk=self.track.pk).exists())
+
+    def test_output_comparison_ignores_trailing_spaces(self):
+        self.assertTrue(same_output("5  \n\n", "5"))
+        self.assertTrue(same_output("a \nb\n", "a\nb"))
+        self.assertFalse(same_output("5 6", "56"))
+
+
+@override_settings(JUDGE0_URL="http://judge0.test")
+class Judge0ClientTests(TestCase):
+    def fake_response(self, payload):
+        import base64, io, json
+        body = {**payload}
+        for key in ("stdout", "stderr", "compile_output"):
+            if body.get(key):
+                body[key] = base64.b64encode(body[key].encode()).decode()
+        response = io.BytesIO(json.dumps(body).encode())
+        return mock.MagicMock(__enter__=lambda s: response, __exit__=lambda *a: None)
+
+    def test_run_sends_code_and_reads_the_result(self):
+        reply = self.fake_response({"status": {"id": 3}, "stdout": "5\n", "time": "0.012"})
+        with mock.patch("urllib.request.urlopen", return_value=reply) as urlopen:
+            result = judge0.run("PYTHON", "print(5)", "", 2000)
+        request = urlopen.call_args.args[0]
+        self.assertTrue(request.full_url.startswith("http://judge0.test/submissions?base64_encoded=true&wait=true"))
+        self.assertEqual(result, {"status": 3, "stdout": "5\n", "error": "", "time_ms": 12})
+
+    def test_unreachable_checker_and_internal_errors(self):
+        import urllib.error
+        with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("down")):
+            with self.assertRaises(judge0.Judge0Error):
+                judge0.run("C", "int main(){}", "", 1000)
+        with mock.patch("urllib.request.urlopen", return_value=self.fake_response({"status": {"id": 13}})):
+            with self.assertRaises(judge0.Judge0Error):
+                judge0.run("JAVA", "class Main {}", "", 1000)
+
+    @override_settings(JUDGE0_URL="")
+    def test_switched_off_checker_never_calls_out(self):
+        with mock.patch("urllib.request.urlopen") as urlopen, self.assertRaises(judge0.Judge0Error):
+            judge0.run("PYTHON", "print(1)", "", 1000)
+        urlopen.assert_not_called()
+
+
+@override_settings(JUDGE0_URL="http://judge0.test")
+class RunCodeTests(TestCase):
+    def setUp(self):
+        sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=sir, title="Python Basics", is_published=True)
+        self.activity = Activity.objects.create(track=track, is_published=True, **activity_data())
+        ActivityTest.objects.create(activity=self.activity, seq_no=1, expected_output="5")
+        self.student = make_user("ana", User.Role.STUDENT)
+        Enrollment.objects.create(student=self.student, track=track)
+        self.client.force_login(self.student)
+        self.url = reverse("student_activity", args=[self.activity.pk])
+
+    def run_code(self, result, code="print(input())", stdin="hello"):
+        with mock.patch("tracks.judge0.run", side_effect=result) as run:
+            response = self.client.post(self.url, {"action": "run", "source_code": code, "stdin": stdin})
+        return response, run
+
+    def test_run_shows_output_and_saves_nothing(self):
+        response, run = self.run_code([outcome(stdout="hello\n")])
+        self.assertContains(response, "Run · Finished")
+        self.assertContains(response, "hello")
+        run.assert_called_once_with("PYTHON", "print(input())", "hello", 2000)
+        self.assertFalse(Submission.objects.exists())
+
+    def test_run_reports_errors(self):
+        response, _ = self.run_code([outcome(status=judge0.COMPILE_ERROR, error="SyntaxError: bad")])
+        self.assertContains(response, "Compilation error")
+        self.assertContains(response, "SyntaxError: bad")
+
+    def test_run_does_not_use_attempts_or_care_about_the_limit(self):
+        Activity.objects.filter(pk=self.activity.pk).update(max_attempts=1, due_at=timezone.now() - timedelta(days=1))
+        response, run = self.run_code([outcome(stdout="ok")])
+        run.assert_called_once()
+        self.assertContains(response, "Run · Finished")
+
+    def test_run_needs_code_and_a_working_checker(self):
+        response, run = self.run_code([], code="")
+        run.assert_not_called()
+        self.assertContains(response, "This field is required.")
+        response, _ = self.run_code(judge0.Judge0Error("The code checker couldn't be reached. Try again in a minute."))
+        self.assertContains(response, "couldn")
+
+
+@override_settings(JUDGE0_URL="http://judge0.test")
+class SubmissionHistoryTests(TestCase):
+    def setUp(self):
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=self.sir, title="Python Basics", is_published=True)
+        self.activity = Activity.objects.create(track=track, is_published=True, **activity_data())
+        ActivityTest.objects.create(activity=self.activity, seq_no=1, expected_output="5")
+        self.ana = make_user("ana", User.Role.STUDENT)
+        self.ben = make_user("ben", User.Role.STUDENT)
+        for student, stdout in ((self.ana, "5"), (self.ben, "4")):
+            Enrollment.objects.create(student=student, track=track)
+            self.client.force_login(student)
+            with mock.patch("tracks.judge0.run", return_value=outcome(stdout=stdout)):
+                self.client.post(reverse("student_activity", args=[self.activity.pk]), {"source_code": "print(5)"})
+
+    def test_instructor_sees_and_filters_submissions(self):
+        self.client.force_login(self.sir)
+        url = reverse("activity_detail", args=[self.activity.pk])
+        response = self.client.get(url)
+        self.assertEqual(len(response.context["submissions"]), 2)
+        accepted = self.client.get(url, {"verdict": "ACCEPTED"}).context["submissions"]
+        self.assertEqual([s.enrollment.student for s in accepted], [self.ana])
+        by_name = self.client.get(url, {"q": "ben"}).context["submissions"]
+        self.assertEqual([s.verdict for s in by_name], ["WRONG_ANSWER"])
+
+    def test_student_dashboard_lists_only_own_attempts(self):
+        self.client.force_login(self.ana)
+        recent = self.client.get(reverse("student_dashboard")).context["recent"]
+        self.assertEqual([s.enrollment.student for s in recent], [self.ana])

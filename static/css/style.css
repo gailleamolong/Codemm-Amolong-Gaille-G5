@@ -68,6 +68,9 @@ form.stack { display: flex; flex-direction: column; gap: 16px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-weight: 600; font-size: 14px; }
+.field textarea.code.small { min-height: 70px; }
+.field textarea.code { font: 13.5px/1.5 Menlo, Consolas, monospace; min-height: 260px; tab-size: 4; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
 .field textarea { min-height: 120px; padding: 10px 14px; border: 1px solid var(--ctl); border-radius: 8px; background: #fff; resize: vertical; }
 .field input, .field select { height: 44px; padding: 0 14px; border: 1px solid var(--ctl); border-radius: 8px; background: #fff; }
 .check { display: inline-flex; align-items: center; gap: 8px; }

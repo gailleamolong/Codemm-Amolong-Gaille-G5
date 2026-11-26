@@ -6,7 +6,7 @@ from django.views import View
 from django.views.generic import ListView, TemplateView, UpdateView
 
 from accounts.models import User
-from tracks.models import Enrollment
+from tracks.models import Enrollment, Submission
 
 DASHBOARDS = {
     User.Role.ADMIN: "admin_dashboard",
@@ -33,7 +33,8 @@ class StudentDashboardView(RoleRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         enrollments = self.request.user.enrollments.filter(status=Enrollment.Status.ACTIVE).select_related("track")
-        return super().get_context_data(enrollments=enrollments, **kwargs)
+        recent = Submission.objects.filter(enrollment__student=self.request.user).select_related("activity")[:5]
+        return super().get_context_data(enrollments=enrollments, recent=recent, **kwargs)
 
 
 class InstructorDashboardView(RoleRequiredMixin, TemplateView):

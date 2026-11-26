@@ -41,4 +41,27 @@
 {% empty %}
 <div class="card"><p class="muted empty">No test cases yet. Add one before publishing.</p></div>
 {% endfor %}
+
+<h2>Submissions</h2>
+{% include "includes/search.html" with show_q=True show_verdict=True placeholder="Student name" %}
+<div class="card table-wrap">
+  {% if submissions %}
+  <table>
+    <thead><tr><th scope="col">Student</th><th scope="col">Attempt</th><th scope="col">Verdict</th><th scope="col">Score</th><th scope="col">Submitted</th></tr></thead>
+    <tbody>
+      {% for s in submissions %}
+      <tr>
+        <td>{{ s.enrollment.student.get_full_name|default:s.enrollment.student.username }}</td>
+        <td><a href="{% url 'submission_detail' s.pk %}">Attempt {{ s.attempt_no }}</a></td>
+        <td>{{ s.get_verdict_display }}</td>
+        <td>{{ s.score|floatformat:0 }}%</td>
+        <td>{{ s.submitted_at|date:"M j, g:i A" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted empty">{% if request.GET %}No submissions match.{% else %}No submissions yet.{% endif %}</p>
+  {% endif %}
+</div>
 {% endblock %}

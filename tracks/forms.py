@@ -1,7 +1,7 @@
 from django import forms
 from django.db.models import Q
 
-from .models import Activity, LearningTrack, TestCase
+from .models import Activity, LearningTrack, Submission, TestCase
 
 
 class TrackForm(forms.ModelForm):
@@ -64,6 +64,7 @@ class SearchForm(forms.Form):
     difficulty = forms.ChoiceField(choices=[("", "Any difficulty"), *Activity.Difficulty.choices], required=False)
     language = forms.ChoiceField(choices=[("", "Any language"), *Activity.Language.choices], required=False)
     status = forms.ChoiceField(choices=[("", "Any status"), ("published", "Published"), ("draft", "Draft")], required=False)
+    verdict = forms.ChoiceField(choices=[("", "Any verdict"), *Submission.Verdict.choices], required=False)
 
     def value(self, name):
         return self.cleaned_data.get(name) if self.is_valid() else ""
@@ -92,3 +93,32 @@ def filter_activities(activities, form):
     if form.value("language"):
         activities = activities.filter(language=form.value("language"))
     return activities
+
+
+class SubmissionForm(forms.Form):
+    source_code = forms.CharField(
+        label="Your code", strip=False, max_length=Submission.MAX_CODE_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 14, "spellcheck": "false", "class": "code"}),
+    )
+    stdin = forms.CharField(
+        label="Input for Run", required=False, strip=False, max_length=10000,
+        widget=forms.Textarea(attrs={"rows": 3, "spellcheck": "false", "class": "code small"}),
+    )
+
+    def clean_source_code(self):
+        code = self.cleaned_data["source_code"]
+        if not code.strip():
+            raise forms.ValidationError("Write some code before submitting.")
+        return code
+
+
+def filter_submissions(submissions, form):
+    q = form.value("q").strip()
+    if q:
+        submissions = submissions.filter(
+            Q(enrollment__student__first_name__icontains=q) | Q(enrollment__student__last_name__icontains=q)
+            | Q(enrollment__student__username__icontains=q)
+        )
+    if form.value("verdict"):
+        submissions = submissions.filter(verdict=form.value("verdict"))
+    return submissions
