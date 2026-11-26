@@ -11,13 +11,14 @@
 </div>
 {% if track.description %}<p class="muted">{{ track.description|linebreaksbr }}</p>{% endif %}
 {% if enrolled %}
+{% include "includes/search.html" with show_q=True show_difficulty=True show_language=True %}
 <div class="card">
   {% if activities %}
   <ul class="list">
     {% for activity in activities %}<li><a href="{% url 'student_activity' activity.pk %}">{{ activity.title }}</a> <span class="muted">· {{ activity.get_difficulty_display }} · {{ activity.get_language_display }}</span></li>{% endfor %}
   </ul>
   {% else %}
-  <p class="muted empty">No activities yet.</p>
+  <p class="muted empty">{% if request.GET %}No activities match.{% else %}No activities yet.{% endif %}</p>
   {% endif %}
 </div>
 {% else %}
