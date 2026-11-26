@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 
 from .models import Activity, LearningTrack, TestCase
 
@@ -54,3 +55,40 @@ class TestCaseForm(forms.ModelForm):
         if taken.exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("This activity already has a test case with this number.")
         return seq_no
+
+
+class SearchForm(forms.Form):
+    """Optional GET filters. Unknown choices are rejected instead of ignored silently."""
+
+    q = forms.CharField(label="Search", required=False, max_length=100)
+    difficulty = forms.ChoiceField(choices=[("", "Any difficulty"), *Activity.Difficulty.choices], required=False)
+    language = forms.ChoiceField(choices=[("", "Any language"), *Activity.Language.choices], required=False)
+    status = forms.ChoiceField(choices=[("", "Any status"), ("published", "Published"), ("draft", "Draft")], required=False)
+
+    def value(self, name):
+        return self.cleaned_data.get(name) if self.is_valid() else ""
+
+
+def filter_tracks(tracks, form):
+    q = form.value("q").strip()
+    if q:
+        tracks = tracks.filter(
+            Q(title__icontains=q) | Q(description__icontains=q)
+            | Q(instructor__first_name__icontains=q) | Q(instructor__last_name__icontains=q)
+        )
+    if form.value("language"):
+        tracks = tracks.filter(activities__language=form.value("language"), activities__is_published=True).distinct()
+    if form.value("status"):
+        tracks = tracks.filter(is_published=form.value("status") == "published")
+    return tracks
+
+
+def filter_activities(activities, form):
+    q = form.value("q").strip()
+    if q:
+        activities = activities.filter(Q(title__icontains=q) | Q(instructions__icontains=q))
+    if form.value("difficulty"):
+        activities = activities.filter(difficulty=form.value("difficulty"))
+    if form.value("language"):
+        activities = activities.filter(language=form.value("language"))
+    return activities
