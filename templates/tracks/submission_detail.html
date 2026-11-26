@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Attempt {{ submission.attempt_no }}{% endblock %}
+{% block content %}
+{% if user.role == "INSTRUCTOR" %}
+<p><a href="{% url 'activity_detail' submission.activity_id %}">← {{ submission.activity.title }}</a></p>
+{% else %}
+<p><a href="{% url 'student_activity' submission.activity_id %}">← {{ submission.activity.title }}</a></p>
+{% endif %}
+<h1>Attempt {{ submission.attempt_no }} · {{ submission.get_verdict_display }}</h1>
+<div class="card">
+  <dl class="details">
+    {% if user.role == "INSTRUCTOR" %}<dt>Student</dt><dd>{{ submission.enrollment.student.get_full_name|default:submission.enrollment.student.username }}</dd>{% endif %}
+    <dt>Score</dt><dd>{{ submission.score|floatformat:0 }}%</dd>
+    <dt>Tests passed</dt><dd>{{ submission.passed_count }} of {{ submission.total_count }}</dd>
+    <dt>Submitted</dt><dd>{{ submission.submitted_at|date:"M j, Y g:i A" }}</dd>
+  </dl>
+</div>
+
+<h2>Test results</h2>
+{% for r in results %}
+<div class="card">
+  {% if r.test_case.is_sample or user.role == "INSTRUCTOR" %}
+  <h3>Test {{ r.test_case.seq_no }} · {{ r.get_status_display }}{% if not r.test_case.is_sample %} · hidden{% endif %}</h3>
+  <div class="row2">
+    <div><p class="muted">Input</p><pre>{{ r.test_case.input_data|default:"(none)" }}</pre></div>
+    <div><p class="muted">Expected output</p><pre>{{ r.test_case.expected_output }}</pre></div>
+  </div>
+  <p class="muted">Your output{% if r.exec_time_ms is not None %} · {{ r.exec_time_ms }} ms{% endif %}</p><pre>{{ r.actual_output|default:"(no output)" }}</pre>
+  {% else %}
+  <h3>Hidden test {{ forloop.counter }} · {{ r.get_status_display }}</h3>
+  {% endif %}
+</div>
+{% endfor %}
+
+<h2>Code</h2>
+<pre>{{ submission.source_code }}</pre>
+{% endblock %}
