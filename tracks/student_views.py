@@ -96,6 +96,8 @@ class StudentActivityView(StudentMixin, DetailView):
         self.object = activity = self.get_object()
         enrollment = Enrollment.objects.get(student=request.user, track=activity.track)
         form = SubmissionForm(request.POST)
+        if request.POST.get("action") == "run":
+            return self.run_code(form)
         blocked = submission_blocked(activity, enrollment.submissions.filter(activity=activity).count())
         if blocked:
             messages.error(request, blocked)
@@ -110,6 +112,29 @@ class StudentActivityView(StudentMixin, DetailView):
                 messages.success(request, f"Attempt {submission.attempt_no}: {submission.get_verdict_display()}.")
                 return redirect("submission_detail", pk=submission.pk)
         return self.render_to_response(self.get_context_data(form=form))
+
+    def run_code(self, form):
+        """Run once with the student's own input. Nothing is saved and no attempt is used."""
+        run_result = None
+        if form.is_valid():
+            data = form.cleaned_data
+            try:
+                run_result = judge0.run(self.object.language, data["source_code"], data["stdin"], self.object.time_limit_ms)
+            except judge0.Judge0Error as error:
+                messages.error(self.request, str(error))
+        return self.render_to_response(self.get_context_data(form=form, run_result=run_result, run_status=run_label(run_result)))
+
+
+def run_label(result):
+    if result is None:
+        return ""
+    if result["status"] == judge0.COMPILE_ERROR:
+        return "Compilation error"
+    if result["status"] == judge0.TIME_LIMIT:
+        return "Time limit exceeded"
+    if result["status"] in judge0.RUNTIME_ERRORS:
+        return "Runtime error"
+    return "Finished"
 
 
 def submission_blocked(activity, attempts_used):
