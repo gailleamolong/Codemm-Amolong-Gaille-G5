@@ -19,4 +19,26 @@
   </dl>
 </div>
 <div class="card">{{ activity.instructions|linebreaks }}</div>
+
+<div class="head">
+  <h2>Test cases</h2>
+  <a class="btn" href="{% url 'test_case_create' activity.pk %}">Add test case</a>
+</div>
+{% for test in activity.test_cases.all %}
+<div class="card">
+  <div class="head">
+    <h3>Test {{ test.seq_no }} · {{ test.is_sample|yesno:"Sample,Hidden" }} · {{ test.points }} pt{{ test.points|pluralize }}</h3>
+    <div class="actions">
+      <a class="btn secondary sm" href="{% url 'test_case_update' test.pk %}">Edit</a>
+      <a class="btn secondary sm" href="{% url 'test_case_delete' test.pk %}">Delete</a>
+    </div>
+  </div>
+  <div class="row2">
+    <div><p class="muted">Input</p><pre>{{ test.input_data|default:"(none)" }}</pre></div>
+    <div><p class="muted">Expected output</p><pre>{{ test.expected_output }}</pre></div>
+  </div>
+</div>
+{% empty %}
+<div class="card"><p class="muted empty">No test cases yet. Add one before publishing.</p></div>
+{% endfor %}
 {% endblock %}
