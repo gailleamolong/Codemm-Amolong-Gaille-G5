@@ -479,3 +479,34 @@ class RunCodeTests(TestCase):
         self.assertContains(response, "This field is required.")
         response, _ = self.run_code(judge0.Judge0Error("The code checker couldn't be reached. Try again in a minute."))
         self.assertContains(response, "couldn")
+
+
+@override_settings(JUDGE0_URL="http://judge0.test")
+class SubmissionHistoryTests(TestCase):
+    def setUp(self):
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=self.sir, title="Python Basics", is_published=True)
+        self.activity = Activity.objects.create(track=track, is_published=True, **activity_data())
+        ActivityTest.objects.create(activity=self.activity, seq_no=1, expected_output="5")
+        self.ana = make_user("ana", User.Role.STUDENT)
+        self.ben = make_user("ben", User.Role.STUDENT)
+        for student, stdout in ((self.ana, "5"), (self.ben, "4")):
+            Enrollment.objects.create(student=student, track=track)
+            self.client.force_login(student)
+            with mock.patch("tracks.judge0.run", return_value=outcome(stdout=stdout)):
+                self.client.post(reverse("student_activity", args=[self.activity.pk]), {"source_code": "print(5)"})
+
+    def test_instructor_sees_and_filters_submissions(self):
+        self.client.force_login(self.sir)
+        url = reverse("activity_detail", args=[self.activity.pk])
+        response = self.client.get(url)
+        self.assertEqual(len(response.context["submissions"]), 2)
+        accepted = self.client.get(url, {"verdict": "ACCEPTED"}).context["submissions"]
+        self.assertEqual([s.enrollment.student for s in accepted], [self.ana])
+        by_name = self.client.get(url, {"q": "ben"}).context["submissions"]
+        self.assertEqual([s.verdict for s in by_name], ["WRONG_ANSWER"])
+
+    def test_student_dashboard_lists_only_own_attempts(self):
+        self.client.force_login(self.ana)
+        recent = self.client.get(reverse("student_dashboard")).context["recent"]
+        self.assertEqual([s.enrollment.student for s in recent], [self.ana])
