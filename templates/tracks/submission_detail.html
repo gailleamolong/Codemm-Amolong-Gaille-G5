@@ -32,6 +32,28 @@
 </div>
 {% endfor %}
 
+<h2>Reflection</h2>
+<div class="card">
+  {% if submission.reflection %}
+  <p>{{ submission.reflection.content|linebreaksbr }}</p>
+  {% if user.role == "STUDENT" %}<div class="actions"><a class="btn secondary sm" href="{% url 'reflection_update' submission.reflection.pk %}">Edit</a></div>{% endif %}
+  {% elif user.role == "STUDENT" %}
+  <div class="head"><p class="muted">What did you learn from this attempt?</p><a class="btn" href="{% url 'reflection_create' submission.pk %}">Write a reflection</a></div>
+  {% else %}
+  <p class="muted empty">No reflection yet.</p>
+  {% endif %}
+</div>
+
+<h2>Peer reviews</h2>
+{% for r in reviews %}
+<div class="card">
+  <h3>{{ r.reviewer.get_full_name|default:r.reviewer.username }} · correctness {{ r.correctness_rating }}/5 · readability {{ r.readability_rating }}/5 · approach {{ r.approach_rating }}/5</h3>
+  <p>{{ r.comment|linebreaksbr }}</p>
+</div>
+{% empty %}
+<div class="card"><p class="muted empty">{% if submission.verdict == "ACCEPTED" %}No reviews yet.{% else %}Only accepted solutions can be reviewed.{% endif %}</p></div>
+{% endfor %}
+
 <h2>Code</h2>
 <pre>{{ submission.source_code }}</pre>
 {% endblock %}

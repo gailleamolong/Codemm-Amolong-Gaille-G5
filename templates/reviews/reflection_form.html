@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Reflection{% endblock %}
+{% block content %}
+<p><a href="{% url 'submission_detail' submission.pk %}">← Attempt {{ submission.attempt_no }} · {{ submission.activity.title }}</a></p>
+<h1>Reflection</h1>
+<div class="card">
+  <form method="post" class="stack" novalidate>
+    {% csrf_token %}
+    {% include "includes/field.html" with field=form.content %}
+    <div class="actions">
+      <button type="submit" class="btn">Save</button>
+      {% if object %}<a class="btn secondary" href="{% url 'reflection_delete' object.pk %}">Delete</a>{% endif %}
+      <a class="btn secondary" href="{% url 'submission_detail' submission.pk %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

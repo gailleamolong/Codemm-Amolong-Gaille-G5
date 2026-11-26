@@ -9,6 +9,8 @@ from dashboard.views import RoleRequiredMixin
 
 from . import judge0
 from .forms import SearchForm, SubmissionForm, filter_activities, filter_tracks
+from reviews.views import reviewable_submissions
+
 from .grading import check, save_submission
 from .models import Activity, Enrollment, LearningTrack, Submission
 
@@ -84,7 +86,10 @@ class StudentActivityView(StudentMixin, DetailView):
         activity = self.object
         attempts = Submission.objects.filter(activity=activity, enrollment__student=self.request.user)
         kwargs.setdefault("form", SubmissionForm())
+        my_reviews = {r.submission_id: r.pk for r in self.request.user.reviews_written.filter(submission__activity=activity)}
+        to_review = [(s, my_reviews.get(s.pk)) for s in reviewable_submissions(self.request.user).filter(activity=activity)]
         return super().get_context_data(
+            to_review=to_review,
             samples=activity.test_cases.filter(is_sample=True),
             attempts=attempts,
             attempts_left=max(activity.max_attempts - attempts.count(), 0),

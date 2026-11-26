@@ -4,6 +4,8 @@
 <div class="head">
   <h1>{{ track.title }}</h1>
   <div class="actions">
+    <a class="btn secondary" href="{% url 'progress_report' track.pk %}">Progress</a>
+    <a class="btn secondary" href="{% url 'pass_rate_report' track.pk %}">Pass rates</a>
     <a class="btn secondary" href="{% url 'track_update' track.pk %}">Edit</a>
     <a class="btn secondary" href="{% url 'track_delete' track.pk %}">Delete</a>
   </div>
