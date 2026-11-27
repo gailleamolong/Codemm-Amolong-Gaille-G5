@@ -293,7 +293,7 @@ def outcome(status=judge0.ACCEPTED, stdout="", error="", time_ms=12):
     return {"status": status, "stdout": stdout, "error": error, "time_ms": time_ms}
 
 
-@override_settings(JUDGE0_URL="http://judge0.test")
+@override_settings(JUDGE0_URL="https://judge0.test")
 class SubmissionTests(TestCase):
     def setUp(self):
         self.sir = make_user("sir", User.Role.INSTRUCTOR)
@@ -403,7 +403,7 @@ class SubmissionTests(TestCase):
         self.assertFalse(same_output("5 6", "56"))
 
 
-@override_settings(JUDGE0_URL="http://judge0.test")
+@override_settings(JUDGE0_URL="https://judge0.test")
 class Judge0ClientTests(TestCase):
     def fake_response(self, payload):
         import base64, io, json
@@ -419,7 +419,7 @@ class Judge0ClientTests(TestCase):
         with mock.patch("urllib.request.urlopen", return_value=reply) as urlopen:
             result = judge0.run("PYTHON", "print(5)", "", 2000)
         request = urlopen.call_args.args[0]
-        self.assertTrue(request.full_url.startswith("http://judge0.test/submissions?base64_encoded=true&wait=true"))
+        self.assertTrue(request.full_url.startswith("https://judge0.test/submissions?base64_encoded=true&wait=true"))
         self.assertEqual(result, {"status": 3, "stdout": "5\n", "error": "", "time_ms": 12})
 
     def test_unreachable_checker_and_internal_errors(self):
@@ -431,6 +431,28 @@ class Judge0ClientTests(TestCase):
             with self.assertRaises(judge0.Judge0Error):
                 judge0.run("JAVA", "class Main {}", "", 1000)
 
+    def test_requests_name_the_client(self):
+        reply = self.fake_response({"status": {"id": 3}, "stdout": "5"})
+        with mock.patch("urllib.request.urlopen", return_value=reply) as urlopen:
+            judge0.run("PYTHON", "print(5)", "", 2000)
+        self.assertEqual(urlopen.call_args.args[0].get_header("User-agent"), "Codemm/1.0")
+
+    @override_settings(JUDGE0_URL="http://judge0.example.com")
+    def test_plain_http_is_refused_so_code_is_never_sent_unencrypted(self):
+        with mock.patch("urllib.request.urlopen") as urlopen, self.assertRaises(judge0.Judge0Error):
+            judge0.run("PYTHON", "print(1)", "", 1000)
+        urlopen.assert_not_called()
+
+    @override_settings(JUDGE0_URL="http://localhost:2358")
+    def test_plain_http_is_allowed_for_a_judge0_on_this_computer(self):
+        with mock.patch("urllib.request.urlopen", return_value=self.fake_response({"status": {"id": 3}})):
+            self.assertEqual(judge0.run("PYTHON", "print(1)", "", 1000)["status"], 3)
+
+    def test_oversized_reply_is_rejected(self):
+        huge = self.fake_response({"status": {"id": 3}, "stdout": "x" * (judge0.MAX_REPLY_BYTES + 10)})
+        with mock.patch("urllib.request.urlopen", return_value=huge), self.assertRaises(judge0.Judge0Error):
+            judge0.run("PYTHON", "print(1)", "", 1000)
+
     @override_settings(JUDGE0_URL="")
     def test_switched_off_checker_never_calls_out(self):
         with mock.patch("urllib.request.urlopen") as urlopen, self.assertRaises(judge0.Judge0Error):
@@ -438,7 +460,7 @@ class Judge0ClientTests(TestCase):
         urlopen.assert_not_called()
 
 
-@override_settings(JUDGE0_URL="http://judge0.test")
+@override_settings(JUDGE0_URL="https://judge0.test")
 class RunCodeTests(TestCase):
     def setUp(self):
         sir = make_user("sir", User.Role.INSTRUCTOR)
@@ -481,7 +503,7 @@ class RunCodeTests(TestCase):
         self.assertContains(response, "couldn")
 
 
-@override_settings(JUDGE0_URL="http://judge0.test")
+@override_settings(JUDGE0_URL="https://judge0.test")
 class SubmissionHistoryTests(TestCase):
     def setUp(self):
         self.sir = make_user("sir", User.Role.INSTRUCTOR)
