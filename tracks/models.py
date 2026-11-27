@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
@@ -20,6 +21,10 @@ class LearningTrack(models.Model):
 
     def __str__(self):
         return self.title
+
+    def clean(self):
+        if self.instructor_id and self.instructor.role != "INSTRUCTOR":
+            raise ValidationError({"instructor": "Only an instructor can own a learning track."})
 
 
 class Activity(models.Model):

@@ -112,6 +112,15 @@ class PeerReviewTests(TestCase):
         response = self.client.get(reverse("student_activity", args=[self.activity.pk]))
         self.assertEqual([s for s, _ in response.context["to_review"]], [self.accepted])
 
+    def test_dropped_student_cannot_edit_or_delete_their_review(self):
+        review = PeerReview.objects.create(submission=self.accepted, reviewer=self.ben, **REVIEW)
+        self.ben_enrollment.status = Enrollment.Status.DROPPED
+        self.ben_enrollment.save()
+        self.assertEqual(self.client.post(reverse("review_update", args=[review.pk]), {**REVIEW, "approach_rating": 5}).status_code, 404)
+        self.assertEqual(self.client.post(reverse("review_delete", args=[review.pk])).status_code, 404)
+        review.refresh_from_db()
+        self.assertEqual(review.approach_rating, 3)
+
 
 TEXT = "I learned to read both numbers from one line and to test negative inputs."
 
@@ -181,3 +190,4 @@ class ReflectionTests(TestCase):
         self.client.logout()
         self.assertRedirects(self.client.get(self.url), f"{reverse('login')}?next={self.url}")
         self.assertEqual(Reflection.objects.get().content, TEXT)
+
