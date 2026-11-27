@@ -556,3 +556,37 @@ class DataIntegrityTests(TestCase):
         for _ in range(2):
             self.client.post(reverse("enroll", args=[self.track.pk]))
         self.assertEqual(Enrollment.objects.filter(student=student).count(), 1)
+
+
+class SecurityTests(TestCase):
+    def setUp(self):
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        self.track = LearningTrack.objects.create(instructor=self.sir, title="Python Basics", is_published=True)
+
+    def test_post_without_csrf_token_is_rejected(self):
+        client = self.client_class(enforce_csrf_checks=True)
+        client.force_login(self.sir)
+        self.assertEqual(client.post(reverse("track_create"), {"title": "No token"}).status_code, 403)
+        self.assertEqual(client.post(reverse("track_delete", args=[self.track.pk])).status_code, 403)
+        self.assertFalse(LearningTrack.objects.filter(title="No token").exists())
+        self.assertTrue(LearningTrack.objects.filter(pk=self.track.pk).exists())
+
+    def test_delete_pages_ask_before_deleting(self):
+        self.client.force_login(self.sir)
+        response = self.client.get(reverse("track_delete", args=[self.track.pk]))
+        self.assertContains(response, "This can't be undone.")
+        self.assertTrue(LearningTrack.objects.filter(pk=self.track.pk).exists())
+
+    def test_user_input_is_escaped_not_run(self):
+        self.client.force_login(self.sir)
+        self.client.post(reverse("track_update", args=[self.track.pk]), {"title": "<script>alert(1)</script>"})
+        response = self.client.get(reverse("track_detail", args=[self.track.pk]))
+        self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+        self.assertNotContains(response, "<script>alert(1)</script>")
+
+    def test_student_cannot_reach_instructor_pages_by_url(self):
+        self.client.force_login(make_user("ana", User.Role.STUDENT))
+        for name in ("track_list", "track_create"):
+            self.assertEqual(self.client.get(reverse(name)).status_code, 403)
+        for name in ("track_detail", "track_update", "track_delete", "progress_report"):
+            self.assertEqual(self.client.get(reverse(name, args=[self.track.pk])).status_code, 403)
