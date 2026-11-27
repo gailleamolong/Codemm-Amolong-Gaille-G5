@@ -9,8 +9,8 @@ from django.urls import reverse
 from accounts.models import User
 
 from . import judge0
-from .grading import same_output
-from .models import Activity, Enrollment, LearningTrack, Submission
+from .grading import SubmissionBlocked, same_output, save_submission
+from .models import Activity, Enrollment, LearningTrack, Submission, TestResult
 from .models import TestCase as ActivityTest
 
 
@@ -369,6 +369,37 @@ class SubmissionTests(TestCase):
         self.client.logout()
         self.assertRedirects(self.client.get(self.url), f"{reverse('login')}?next={self.url}")
 
+    def test_save_submission_rechecks_attempt_limit(self):
+        self.activity.max_attempts = 1
+        self.activity.save(update_fields=["max_attempts"])
+        self.submit([outcome(stdout="5"), outcome(stdout="SECRET-18")])
+        results = [(self.sample, TestResult.Status.PASSED, "5", 12)]
+        with self.assertRaisesMessage(SubmissionBlocked, "You've used all your attempts for this activity."):
+            save_submission(self.enrollment, self.activity, "print(5)", results)
+        self.assertEqual(Submission.objects.count(), 1)
+        self.assertEqual(TestResult.objects.count(), 2)
+
+    def test_save_submission_rechecks_due_date(self):
+        Activity.objects.filter(pk=self.activity.pk).update(due_at=timezone.now() - timedelta(seconds=1))
+        results = [(self.sample, TestResult.Status.PASSED, "5", 12)]
+        with self.assertRaisesMessage(SubmissionBlocked, "The due date has passed."):
+            save_submission(self.enrollment, self.activity, "print(5)", results)
+        self.assertFalse(Submission.objects.exists())
+        self.assertFalse(TestResult.objects.exists())
+
+    def test_submit_shows_due_date_error_if_grading_finishes_late(self):
+        due = timezone.now() + timedelta(hours=1)
+        Activity.objects.filter(pk=self.activity.pk).update(due_at=due)
+
+        def finish_after_deadline(*args):
+            with mock.patch("django.utils.timezone.now", return_value=due + timedelta(seconds=1)):
+                return save_submission(*args)
+
+        with mock.patch("tracks.student_views.save_submission", side_effect=finish_after_deadline):
+            response, _ = self.submit([outcome(stdout="5"), outcome(stdout="SECRET-18")])
+        self.assertIn("The due date has passed.", [str(m) for m in get_messages(response.wsgi_request)])
+        self.assertFalse(Submission.objects.exists())
+
     def test_hidden_test_details_stay_hidden_from_students(self):
         self.submit([outcome(stdout="5"), outcome(stdout="my-hidden-output")])
         detail = reverse("submission_detail", args=[Submission.objects.get().pk])
@@ -396,6 +427,17 @@ class SubmissionTests(TestCase):
         self.assertTrue(ActivityTest.objects.filter(pk=self.hidden.pk).exists())
         self.assertTrue(Activity.objects.filter(pk=self.activity.pk).exists())
         self.assertTrue(LearningTrack.objects.filter(pk=self.track.pk).exists())
+
+    def test_test_case_with_results_cannot_be_edited(self):
+        self.submit([outcome(stdout="5"), outcome(stdout="SECRET-18")])
+        self.client.force_login(self.sir)
+        response = self.client.post(reverse("test_case_update", args=[self.hidden.pk]),
+                                    {"seq_no": 2, "expected_output": "18", "points": 1, "is_sample": "on"})
+        self.assertRedirects(response, reverse("activity_detail", args=[self.activity.pk]))
+        self.assertIn("This test case already has results, so it can't be changed. Add a new test case instead.",
+                      [str(m) for m in get_messages(response.wsgi_request)])
+        self.hidden.refresh_from_db()
+        self.assertEqual((self.hidden.expected_output, self.hidden.points, self.hidden.is_sample), ("SECRET-18", 3, False))
 
     def test_output_comparison_ignores_trailing_spaces(self):
         self.assertTrue(same_output("5  \n\n", "5"))
@@ -436,6 +478,19 @@ class Judge0ClientTests(TestCase):
         with mock.patch("urllib.request.urlopen", return_value=reply) as urlopen:
             judge0.run("PYTHON", "print(5)", "", 2000)
         self.assertEqual(urlopen.call_args.args[0].get_header("User-agent"), "Codemm/1.0")
+
+    def test_disconnected_checker(self):
+        import http.client
+        with mock.patch("urllib.request.urlopen", side_effect=http.client.RemoteDisconnected()):
+            with self.assertRaisesMessage(judge0.Judge0Error, "The code checker couldn't be reached. Try again in a minute."):
+                judge0.run("PYTHON", "print(5)", "", 2000)
+
+    def test_malformed_replies(self):
+        for raw in (b"[]", b'{"status":{"id":3},"stdout":"A"}', b'{"status":{"id":3},"time":"slow"}'):
+            with self.subTest(raw=raw), mock.patch("urllib.request.urlopen") as urlopen:
+                urlopen.return_value.__enter__.return_value.read.return_value = raw
+                with self.assertRaisesMessage(judge0.Judge0Error, "The code checker had a problem. Try again in a minute."):
+                    judge0.run("PYTHON", "print(5)", "", 2000)
 
     @override_settings(JUDGE0_URL="http://judge0.example.com")
     def test_plain_http_is_refused_so_code_is_never_sent_unencrypted(self):
