@@ -716,3 +716,23 @@ class CodeCheckRateLimitTests(TestCase):
             self.client.force_login(other)
             self.client.post(self.url, {"action": "run", "source_code": "print(5)", "stdin": ""})
         self.assertEqual(run.call_count, 11)
+
+
+@override_settings(JUDGE0_URL="https://judge0.test")
+class SubmissionOutputLabelTests(TestCase):
+    def test_instructor_sees_student_output_and_student_sees_your_output(self):
+        sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=sir, title="Python Basics", is_published=True)
+        activity = Activity.objects.create(track=track, is_published=True, **activity_data())
+        ActivityTest.objects.create(activity=activity, seq_no=1, expected_output="5", is_sample=True)
+        ana = make_user("ana", User.Role.STUDENT)
+        Enrollment.objects.create(student=ana, track=track)
+        self.client.force_login(ana)
+        with mock.patch("tracks.judge0.run", return_value=outcome(stdout="5")):
+            self.client.post(reverse("student_activity", args=[activity.pk]), {"action": "submit", "source_code": "print(5)"})
+        url = reverse("submission_detail", args=[Submission.objects.get().pk])
+        self.assertContains(self.client.get(url), "Your output")
+        self.client.force_login(sir)
+        response = self.client.get(url)
+        self.assertContains(response, "Student output")
+        self.assertNotContains(response, "Your output")

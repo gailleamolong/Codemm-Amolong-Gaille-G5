@@ -73,7 +73,11 @@ class ReviewCreateView(StudentMixin, SuccessMessageMixin, CreateView):
 
 class OwnReviewMixin(StudentMixin):
     def get_queryset(self):
-        return PeerReview.objects.filter(reviewer=self.request.user).select_related("submission__activity")
+        return PeerReview.objects.filter(
+            reviewer=self.request.user,
+            submission__activity__track__enrollments__student=self.request.user,
+            submission__activity__track__enrollments__status=Enrollment.Status.ACTIVE,
+        ).select_related("submission__activity")
 
     def get_success_url(self):
         return reverse("student_activity", args=[self.object.submission.activity_id])
