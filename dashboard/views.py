@@ -55,6 +55,7 @@ class AdminDashboardView(RoleRequiredMixin, ListView):
 class UserRoleUpdateView(RoleRequiredMixin, SuccessMessageMixin, UpdateView):
     role = User.Role.ADMIN
     template_name = "dashboard/user_edit.html"
+    context_object_name = "account"
     fields = ("role", "is_active")
     success_url = reverse_lazy("admin_dashboard")
     success_message = "%(username)s updated."
