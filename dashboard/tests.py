@@ -73,3 +73,12 @@ class TrackOwnerRoleTests(TestCase):
         self.track.instructor = make_user("ana", User.Role.STUDENT)
         with self.assertRaises(ValidationError):
             self.track.full_clean()
+
+
+class ExpiredFormPageTests(TestCase):
+    def test_a_stale_form_shows_a_friendly_page_with_a_way_back(self):
+        from django.test import Client
+        response = Client(enforce_csrf_checks=True).post("/accounts/login/", {"username": "x", "password": "y"})
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "This page expired", status_code=403)
+        self.assertNotContains(response, "CSRF verification failed", status_code=403)
