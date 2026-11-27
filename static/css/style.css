@@ -33,7 +33,7 @@ a { color: var(--green); }
 
 h2 { margin: 0; font: 600 20px/1.3 var(--display); }
 h3 { margin: 0; font: 600 16px/1.3 var(--display); }
-pre { margin: 4px 0 0; padding: 10px 12px; background: var(--ground); border: 1px solid var(--line); border-radius: 8px; white-space: pre-wrap; font: 13.5px/1.5 Menlo, Consolas, monospace; }
+pre { margin: 4px 0 0; padding: 10px 12px; background: var(--ground); border: 1px solid var(--line); border-radius: 8px; white-space: pre-wrap; overflow-wrap: anywhere; font: 13.5px/1.5 Menlo, Consolas, monospace; }
 h1 { margin: 0; font: 600 28px/1.2 var(--display); }
 .muted { margin: 0; color: var(--muted); }
 
