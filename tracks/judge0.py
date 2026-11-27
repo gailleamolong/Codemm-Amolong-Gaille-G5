@@ -1,6 +1,6 @@
 import base64
+import http.client
 import json
-import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -55,21 +55,21 @@ def run(language, source_code, stdin, time_limit_ms):
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             raw = response.read(MAX_REPLY_BYTES + 1)
-    except (urllib.error.URLError, TimeoutError) as error:
+    except (OSError, http.client.HTTPException) as error:
         raise Judge0Error("The code checker couldn't be reached. Try again in a minute.") from error
     if len(raw) > MAX_REPLY_BYTES:
         raise Judge0Error("The program printed too much output.")
     try:
         data = json.loads(raw)
-    except ValueError as error:
+        status = (data.get("status") or {}).get("id")
+        if status not in (ACCEPTED, TIME_LIMIT, COMPILE_ERROR, *RUNTIME_ERRORS):
+            raise ValueError("Unexpected checker status")
+        time = data.get("time")
+        return {
+            "status": status,
+            "stdout": _decode(data.get("stdout")),
+            "error": _decode(data.get("compile_output")) or _decode(data.get("stderr")),
+            "time_ms": round(float(time) * 1000) if time else None,
+        }
+    except (ValueError, TypeError, AttributeError, OverflowError) as error:
         raise Judge0Error("The code checker had a problem. Try again in a minute.") from error
-    status = (data.get("status") or {}).get("id")
-    if status not in (ACCEPTED, TIME_LIMIT, COMPILE_ERROR, *RUNTIME_ERRORS):
-        raise Judge0Error("The code checker had a problem. Try again in a minute.")
-    time = data.get("time")
-    return {
-        "status": status,
-        "stdout": _decode(data.get("stdout")),
-        "error": _decode(data.get("compile_output")) or _decode(data.get("stderr")),
-        "time_ms": round(float(time) * 1000) if time else None,
-    }
