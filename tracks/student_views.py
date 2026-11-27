@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django.views import View
@@ -51,12 +52,15 @@ class CatalogDetailView(StudentMixin, DetailView):
 class EnrollView(StudentMixin, View):
     def post(self, request, pk):
         track = get_object_or_404(LearningTrack, pk=pk, is_published=True)
-        enrollment, created = Enrollment.objects.get_or_create(student=request.user, track=track)
-        if not created and enrollment.status == Enrollment.Status.ACTIVE:
+        with transaction.atomic():
+            enrollment, created = Enrollment.objects.select_for_update().get_or_create(student=request.user, track=track)
+            already_active = not created and enrollment.status == Enrollment.Status.ACTIVE
+            if not already_active:
+                enrollment.status = Enrollment.Status.ACTIVE
+                enrollment.save()
+        if already_active:
             messages.error(request, f"You're already enrolled in {track.title}.")
         else:
-            enrollment.status = Enrollment.Status.ACTIVE
-            enrollment.save()
             messages.success(request, f"Enrolled in {track.title}.")
         return redirect("catalog_detail", pk=track.pk)
 
@@ -99,7 +103,7 @@ class StudentActivityView(StudentMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = activity = self.get_object()
-        enrollment = Enrollment.objects.get(student=request.user, track=activity.track)
+        enrollment = get_object_or_404(Enrollment, student=request.user, track=activity.track, status=Enrollment.Status.ACTIVE)
         form = SubmissionForm(request.POST)
         if request.POST.get("action") == "run":
             return self.run_code(form)
