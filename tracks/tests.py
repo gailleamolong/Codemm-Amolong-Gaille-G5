@@ -736,3 +736,29 @@ class SubmissionOutputLabelTests(TestCase):
         response = self.client.get(url)
         self.assertContains(response, "Student output")
         self.assertNotContains(response, "Your output")
+
+
+@override_settings(JUDGE0_URL="https://judge0.test")
+class AstraFindingTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        sir = make_user("sir", User.Role.INSTRUCTOR)
+        self.track = LearningTrack.objects.create(instructor=sir, title="Python Basics", is_published=True)
+        self.activity = Activity.objects.create(track=self.track, is_published=True, **activity_data(max_attempts=50))
+        ActivityTest.objects.create(activity=self.activity, seq_no=1, expected_output="5")
+        self.student = make_user("ana", User.Role.STUDENT)
+        Enrollment.objects.create(student=self.student, track=self.track)
+        self.client.force_login(self.student)
+
+    def test_empty_runs_do_not_use_up_the_code_check_limit(self):
+        url = reverse("student_activity", args=[self.activity.pk])
+        for _ in range(10):
+            self.client.post(url, {"action": "run", "source_code": "", "stdin": ""})
+        with mock.patch("tracks.judge0.run", return_value=outcome(stdout="5")) as run:
+            self.client.post(url, {"action": "run", "source_code": "print(5)", "stdin": ""})
+        self.assertEqual(run.call_count, 1)
+
+    def test_my_progress_hides_unpublished_activities(self):
+        Activity.objects.create(track=self.track, is_published=False, **activity_data(title="Unreleased final exam"))
+        self.assertNotContains(self.client.get(reverse("my_progress")), "Unreleased final exam")
