@@ -74,7 +74,7 @@ class MyProgressView(RoleRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         reports = []
         for enrollment in self.request.user.enrollments.select_related("track").filter(status=Enrollment.Status.ACTIVE):
-            activities, rows = progress_rows(enrollment.track, students=[self.request.user])
+            activities, rows = progress_rows(enrollment.track, students=[self.request.user], published_only=True)
             row = rows[0]
             reports.append({"track": enrollment.track, "total": len(activities), "row": row,
                             "scores": list(zip(activities, row["best_scores"]))})

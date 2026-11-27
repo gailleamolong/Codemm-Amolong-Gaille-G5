@@ -108,7 +108,7 @@ class StudentActivityView(StudentMixin, DetailView):
         self.object = activity = self.get_object()
         enrollment = get_object_or_404(Enrollment, student=request.user, track=activity.track, status=Enrollment.Status.ACTIVE)
         form = SubmissionForm(request.POST)
-        if ratelimit.record(f"judge0:{request.user.pk}", 60) > CODE_CHECKS_PER_MINUTE:
+        if form.is_valid() and ratelimit.record(f"judge0:{request.user.pk}", 60) > CODE_CHECKS_PER_MINUTE:
             messages.error(request, "You're running code too often. Wait a minute and try again.")
             return self.render_to_response(self.get_context_data(form=form))
         if request.POST.get("action") == "run":

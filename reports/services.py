@@ -4,9 +4,10 @@ from reviews.models import PeerReview
 from tracks.models import Submission, TestResult
 
 
-def progress_rows(track, students=None):
+def progress_rows(track, students=None, published_only=False):
     """One row per enrolled student: activities attempted and accepted, best score per activity, reviews received."""
-    activities = list(track.activities.order_by("created_at"))
+    activities = track.activities.order_by("created_at")
+    activities = list(activities.filter(is_published=True) if published_only else activities)
     enrollments = track.enrollments.select_related("student").order_by("student__last_name", "student__first_name")
     if students is not None:
         enrollments = enrollments.filter(student__in=students)
