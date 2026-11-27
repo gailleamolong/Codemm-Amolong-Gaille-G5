@@ -65,3 +65,9 @@ class UserRoleUpdateView(RoleRequiredMixin, SuccessMessageMixin, UpdateView):
 
     def get_success_message(self, cleaned_data):
         return self.success_message % {"username": self.object.username}
+
+    def form_valid(self, form):
+        if form.cleaned_data["role"] != User.Role.INSTRUCTOR and self.object.tracks.exists():
+            form.add_error("role", "This user owns learning tracks, so they must stay an instructor. Delete their tracks first.")
+            return self.form_invalid(form)
+        return super().form_valid(form)

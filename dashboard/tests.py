@@ -52,3 +52,24 @@ class UserEditPageTests(TestCase):
         response = self.client.get(f"/administrator/users/{student.pk}/")
         self.assertEqual(response.context["user"], admin)
         self.assertNotContains(response, "my-progress")
+
+
+class TrackOwnerRoleTests(TestCase):
+    def setUp(self):
+        from tracks.models import LearningTrack
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        self.track = LearningTrack(instructor=self.sir, title="Python Basics")
+        self.track.save()
+
+    def test_admin_cannot_change_the_role_of_an_instructor_who_owns_tracks(self):
+        self.client.force_login(make_user("boss", User.Role.ADMIN))
+        response = self.client.post(f"/administrator/users/{self.sir.pk}/", {"role": "STUDENT", "is_active": "on"})
+        self.assertContains(response, "owns learning tracks")
+        self.sir.refresh_from_db()
+        self.assertEqual(self.sir.role, User.Role.INSTRUCTOR)
+
+    def test_a_track_owner_must_be_an_instructor(self):
+        from django.core.exceptions import ValidationError
+        self.track.instructor = make_user("ana", User.Role.STUDENT)
+        with self.assertRaises(ValidationError):
+            self.track.full_clean()
