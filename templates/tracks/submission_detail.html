@@ -25,7 +25,7 @@
     <div><p class="muted">Input</p><pre>{{ r.test_case.input_data|default:"(none)" }}</pre></div>
     <div><p class="muted">Expected output</p><pre>{{ r.test_case.expected_output }}</pre></div>
   </div>
-  <p class="muted">Your output{% if r.exec_time_ms is not None %} · {{ r.exec_time_ms }} ms{% endif %}</p><pre>{{ r.actual_output|default:"(no output)" }}</pre>
+  <p class="muted">{% if user == submission.enrollment.student %}Your output{% else %}Student output{% endif %}{% if r.exec_time_ms is not None %} · {{ r.exec_time_ms }} ms{% endif %}</p><pre>{{ r.actual_output|default:"(no output)" }}</pre>
   {% else %}
   <h3>Hidden test {{ forloop.counter }} · {{ r.get_status_display }}</h3>
   {% endif %}

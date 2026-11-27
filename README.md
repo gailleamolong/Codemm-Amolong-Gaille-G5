@@ -118,7 +118,7 @@ allow that, so the tests use a separate local PostgreSQL server while the app ke
    python manage.py test
    ```
 
-   Expected result: `Ran 121 tests ... OK`. Judge0 is replaced with a stand-in, so the tests never
+   Expected result: `Ran 122 tests ... OK`. Judge0 is replaced with a stand-in, so the tests never
    call the network.
 
 4. Remove the test server when you're done: `docker rm -f codemm-test-db`.
