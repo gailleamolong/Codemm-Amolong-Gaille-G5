@@ -590,3 +590,12 @@ class SecurityTests(TestCase):
             self.assertEqual(self.client.get(reverse(name)).status_code, 403)
         for name in ("track_detail", "track_update", "track_delete", "progress_report"):
             self.assertEqual(self.client.get(reverse(name, args=[self.track.pk])).status_code, 403)
+
+
+class PublishErrorMessageTests(TestCase):
+    def test_publish_error_is_shown_on_the_page(self):
+        sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=sir, title="Python Basics")
+        self.client.force_login(sir)
+        response = self.client.post(reverse("activity_create", args=[track.pk]), activity_data(is_published="on"))
+        self.assertContains(response, "Add at least one test case before publishing.")

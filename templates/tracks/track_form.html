@@ -8,6 +8,7 @@
     {% include "includes/field.html" with field=form.title %}
     {% include "includes/field.html" with field=form.description %}
     <label class="check">{{ form.is_published }} Published (students can see and enroll)</label>
+    {% for error in form.is_published.errors %}<span class="err">{{ error }}</span>{% endfor %}
     <div class="actions">
       <button type="submit" class="btn">Save</button>
       <a class="btn secondary" href="{% if object %}{% url 'track_detail' object.pk %}{% else %}{% url 'track_list' %}{% endif %}">Cancel</a>
