@@ -1,13 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% if recent %}
-<h2>Recent attempts</h2>
-<div class="card">
-  <ul class="list">
-    {% for s in recent %}<li><a href="{% url 'submission_detail' s.pk %}">{{ s.activity.title }} · attempt {{ s.attempt_no }}</a> <span class="muted">· {{ s.get_verdict_display }} · {{ s.score|floatformat:0 }}%</span></li>{% endfor %}
-  </ul>
-</div>
-{% endif %}
-{% endblock %}
+{% block title %}Dashboard{% endblock %}
 {% block content %}
 <div class="head">
   <h1>Hi, {{ user.first_name|default:user.username }}</h1>
@@ -22,4 +14,12 @@
   <p class="muted empty">You're not enrolled in any learning tracks yet.</p>
   {% endif %}
 </div>
+{% if recent %}
+<h2>Recent attempts</h2>
+<div class="card">
+  <ul class="list">
+    {% for s in recent %}<li><a href="{% url 'submission_detail' s.pk %}">{{ s.activity.title }} · attempt {{ s.attempt_no }}</a> <span class="muted">· {{ s.get_verdict_display }} · {{ s.score|floatformat:0 }}%</span></li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
 {% endblock %}

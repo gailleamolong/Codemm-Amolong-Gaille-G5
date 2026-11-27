@@ -24,3 +24,31 @@ class ErrorPageTests(TestCase):
         self.assertEqual(response.status_code, 500)
         self.assertIn("Something went wrong", response.content.decode())
         self.assertNotIn("Traceback", response.content.decode())
+
+
+class StudentDashboardTests(TestCase):
+    def test_recent_attempts_show_on_the_page_not_in_the_title(self):
+        from tracks.models import Activity, Enrollment, LearningTrack, Submission
+        from tracks.tests import activity_data
+        sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=sir, title="Python Basics", is_published=True)
+        activity = Activity.objects.create(track=track, is_published=True, **activity_data())
+        student = make_user("ana", User.Role.STUDENT)
+        enrollment = Enrollment.objects.create(student=student, track=track)
+        Submission.objects.create(enrollment=enrollment, activity=activity, attempt_no=1, source_code="print(5)",
+                                  verdict=Submission.Verdict.ACCEPTED, passed_count=1, total_count=1, score=100)
+        self.client.force_login(student)
+        html = self.client.get("/student/").content.decode()
+        title = html.split("<title>")[1].split("</title>")[0]
+        self.assertNotIn("Recent attempts", title)
+        self.assertIn("Recent attempts", html.split('id="content"')[1])
+
+
+class UserEditPageTests(TestCase):
+    def test_nav_belongs_to_the_admin_not_the_user_being_edited(self):
+        admin = make_user("boss", User.Role.ADMIN)
+        student = make_user("ana", User.Role.STUDENT)
+        self.client.force_login(admin)
+        response = self.client.get(f"/administrator/users/{student.pk}/")
+        self.assertEqual(response.context["user"], admin)
+        self.assertNotContains(response, "my-progress")
