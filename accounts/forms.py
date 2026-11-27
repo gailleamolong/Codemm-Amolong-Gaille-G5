@@ -1,5 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+
+from codemm import ratelimit
 
 from .models import User
 
@@ -25,3 +27,21 @@ class ProfileForm(forms.ModelForm):
 
     def clean_email(self):
         return self.cleaned_data["email"].lower()
+
+
+class LoginForm(AuthenticationForm):
+    MAX_FAILURES = 5
+    WINDOW_SECONDS = 15 * 60
+    error_messages = {**AuthenticationForm.error_messages, "invalid_login": "Incorrect username or password."}
+
+    def clean(self):
+        key = f"login:{self.data.get('username', '').lower()}:{self.request.META.get('REMOTE_ADDR', '')}"
+        if ratelimit.hits(key) >= self.MAX_FAILURES:
+            raise forms.ValidationError("Too many failed attempts. Try again in 15 minutes.")
+        try:
+            cleaned = super().clean()
+        except forms.ValidationError:
+            ratelimit.record(key, self.WINDOW_SECONDS)
+            raise
+        ratelimit.clear(key)
+        return cleaned

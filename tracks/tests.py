@@ -621,3 +621,43 @@ class PublishErrorMessageTests(TestCase):
         self.client.force_login(sir)
         response = self.client.post(reverse("activity_create", args=[track.pk]), activity_data(is_published="on"))
         self.assertContains(response, "Add at least one test case before publishing.")
+
+
+@override_settings(JUDGE0_URL="https://judge0.test")
+class CodeCheckRateLimitTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=sir, title="Python Basics", is_published=True)
+        self.activity = Activity.objects.create(track=track, is_published=True, **activity_data(max_attempts=50))
+        ActivityTest.objects.create(activity=self.activity, seq_no=1, expected_output="5")
+        self.student = make_user("ana", User.Role.STUDENT)
+        Enrollment.objects.create(student=self.student, track=track)
+        self.client.force_login(self.student)
+        self.url = reverse("student_activity", args=[self.activity.pk])
+
+    def test_more_than_ten_runs_a_minute_are_refused(self):
+        with mock.patch("tracks.judge0.run", return_value=outcome(stdout="5")) as run:
+            for _ in range(10):
+                self.client.post(self.url, {"action": "run", "source_code": "print(5)", "stdin": ""})
+            response = self.client.post(self.url, {"action": "run", "source_code": "print(5)", "stdin": ""})
+        self.assertContains(response, "You&#x27;re running code too often. Wait a minute and try again.")
+        self.assertEqual(run.call_count, 10)
+
+    def test_submits_count_toward_the_same_limit_and_save_nothing_when_refused(self):
+        with mock.patch("tracks.judge0.run", return_value=outcome(stdout="5")):
+            for _ in range(10):
+                self.client.post(self.url, {"action": "submit", "source_code": "print(5)"})
+            self.client.post(self.url, {"action": "submit", "source_code": "print(5)"})
+        self.assertEqual(Submission.objects.count(), 10)
+
+    def test_the_limit_is_per_student(self):
+        other = make_user("ben", User.Role.STUDENT)
+        Enrollment.objects.create(student=other, track=self.activity.track)
+        with mock.patch("tracks.judge0.run", return_value=outcome(stdout="5")) as run:
+            for _ in range(10):
+                self.client.post(self.url, {"action": "run", "source_code": "print(5)", "stdin": ""})
+            self.client.force_login(other)
+            self.client.post(self.url, {"action": "run", "source_code": "print(5)", "stdin": ""})
+        self.assertEqual(run.call_count, 11)
