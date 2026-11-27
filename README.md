@@ -118,7 +118,7 @@ allow that, so the tests use a separate local PostgreSQL server while the app ke
    python manage.py test
    ```
 
-   Expected result: `Ran 102 tests ... OK`. Judge0 is replaced with a stand-in, so the tests never
+   Expected result: `Ran 108 tests ... OK`. Judge0 is replaced with a stand-in, so the tests never
    call the network.
 
 4. Remove the test server when you're done: `docker rm -f codemm-test-db`.
@@ -148,3 +148,5 @@ static/      stylesheet, Codemm logo and fonts
 - `.env`, `venv/` and `__pycache__/` are in `.gitignore`. Never commit database passwords or Supabase keys.
 - Logout uses POST with a CSRF token. Every form is CSRF-protected.
 - Deactivated accounts cannot log in.
+- After 5 failed logins for one username from one address, login is locked for 15 minutes.
+- Each student can Run or Submit at most 10 times a minute, so nobody can flood Judge0.

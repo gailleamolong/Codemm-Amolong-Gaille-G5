@@ -6,6 +6,7 @@ from django.views import View
 from django.views.generic import DetailView, ListView
 
 from accounts.models import User
+from codemm import ratelimit
 from dashboard.views import RoleRequiredMixin
 
 from . import judge0
@@ -14,6 +15,9 @@ from reviews.views import reviewable_submissions
 
 from .grading import check, save_submission
 from .models import Activity, Enrollment, LearningTrack, Submission
+
+
+CODE_CHECKS_PER_MINUTE = 10
 
 
 class StudentMixin(RoleRequiredMixin):
@@ -105,6 +109,9 @@ class StudentActivityView(StudentMixin, DetailView):
         self.object = activity = self.get_object()
         enrollment = get_object_or_404(Enrollment, student=request.user, track=activity.track, status=Enrollment.Status.ACTIVE)
         form = SubmissionForm(request.POST)
+        if ratelimit.record(f"judge0:{request.user.pk}", 60) > CODE_CHECKS_PER_MINUTE:
+            messages.error(request, "You're running code too often. Wait a minute and try again.")
+            return self.render_to_response(self.get_context_data(form=form))
         if request.POST.get("action") == "run":
             return self.run_code(form)
         blocked = submission_blocked(activity, enrollment.submissions.filter(activity=activity).count())
