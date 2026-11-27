@@ -5,6 +5,7 @@ a local .env file (see .env.example). Nothing secret is committed.
 """
 
 import os
+import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -86,6 +87,18 @@ DATABASES = {
         "CONN_MAX_AGE": 60,
     }
 }
+
+# `manage.py test` creates and drops a throwaway database, which Supabase's pooler doesn't allow.
+# When TEST_DB_HOST is set, the tests use that PostgreSQL server instead (see README, Tests).
+if "test" in sys.argv[1:2] and os.environ.get("TEST_DB_HOST"):
+    DATABASES["default"].update(
+        NAME=os.environ.get("TEST_DB_NAME", "codemm"),
+        USER=env("TEST_DB_USER"),
+        PASSWORD=env("TEST_DB_PASSWORD"),
+        HOST=os.environ["TEST_DB_HOST"],
+        PORT=os.environ.get("TEST_DB_PORT", "5432"),
+        OPTIONS={"sslmode": os.environ.get("TEST_DB_SSLMODE", "disable")},
+    )
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
