@@ -42,7 +42,8 @@ class TrackDetailView(OwnTrackMixin, DetailView):
     def get_context_data(self, **kwargs):
         search = SearchForm(self.request.GET)
         activities = filter_activities(self.object.activities.all(), search)
-        return super().get_context_data(search=search, activities=activities, **kwargs)
+        enrollments = self.object.enrollments.select_related("student")
+        return super().get_context_data(search=search, activities=activities, enrollments=enrollments, **kwargs)
 
 
 class TrackCreateView(InstructorMixin, SuccessMessageMixin, CreateView):
