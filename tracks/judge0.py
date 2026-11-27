@@ -1,6 +1,7 @@
 import base64
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from django.conf import settings
@@ -8,6 +9,9 @@ from django.conf import settings
 LANGUAGE_IDS = {"PYTHON": 71, "JAVA": 62, "C": 50}
 ACCEPTED, TIME_LIMIT, COMPILE_ERROR = 3, 5, 6
 RUNTIME_ERRORS = range(7, 13)
+MAX_REPLY_BYTES = 1_000_000
+CLIENT_NAME = "Codemm/1.0"
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
 class Judge0Error(Exception):
@@ -16,6 +20,13 @@ class Judge0Error(Exception):
 
 def is_configured():
     return bool(settings.JUDGE0_URL)
+
+
+def _check_url(url):
+    """Student code only travels over HTTPS, except to a Judge0 on this computer."""
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme != "https" and not (parts.scheme == "http" and parts.hostname in LOCAL_HOSTS):
+        raise Judge0Error("Code checking is misconfigured: JUDGE0_URL must use https.")
 
 
 def _encode(text):
@@ -30,6 +41,7 @@ def run(language, source_code, stdin, time_limit_ms):
     """Run code once and return {"status": id, "stdout": str, "error": str, "time_ms": int or None}."""
     if not is_configured():
         raise Judge0Error("Code checking isn't set up yet.")
+    _check_url(settings.JUDGE0_URL)
     body = json.dumps({
         "language_id": LANGUAGE_IDS[language],
         "source_code": _encode(source_code),
@@ -38,13 +50,19 @@ def run(language, source_code, stdin, time_limit_ms):
     }).encode()
     request = urllib.request.Request(
         f"{settings.JUDGE0_URL}/submissions?base64_encoded=true&wait=true",
-        data=body, headers={"Content-Type": "application/json"}, method="POST",
+        data=body, headers={"Content-Type": "application/json", "User-Agent": CLIENT_NAME}, method="POST",
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            data = json.load(response)
-    except (urllib.error.URLError, TimeoutError, ValueError) as error:
+            raw = response.read(MAX_REPLY_BYTES + 1)
+    except (urllib.error.URLError, TimeoutError) as error:
         raise Judge0Error("The code checker couldn't be reached. Try again in a minute.") from error
+    if len(raw) > MAX_REPLY_BYTES:
+        raise Judge0Error("The program printed too much output.")
+    try:
+        data = json.loads(raw)
+    except ValueError as error:
+        raise Judge0Error("The code checker had a problem. Try again in a minute.") from error
     status = (data.get("status") or {}).get("id")
     if status not in (ACCEPTED, TIME_LIMIT, COMPILE_ERROR, *RUNTIME_ERRORS):
         raise Judge0Error("The code checker had a problem. Try again in a minute.")
