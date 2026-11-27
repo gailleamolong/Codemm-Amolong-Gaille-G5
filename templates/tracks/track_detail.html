@@ -40,7 +40,7 @@
 
 <h2>Enrolled students</h2>
 <div class="card">
-  {% with active=track.enrollments.all %}
+  {% with active=enrollments %}
   {% if active %}
   <ul class="list">
     {% for e in active %}<li>{{ e.student.get_full_name|default:e.student.username }} <span class="muted">· {{ e.get_status_display }}</span></li>{% endfor %}
