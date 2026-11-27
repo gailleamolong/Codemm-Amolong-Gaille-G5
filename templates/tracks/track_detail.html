@@ -11,7 +11,7 @@
   </div>
 </div>
 {% if track.description %}<p class="muted">{{ track.description|linebreaksbr }}</p>{% endif %}
-<p class="muted">{{ track.is_published|yesno:"Published,Draft" }}</p>
+<p><span class="tag{% if track.is_published %} ok{% endif %}">{{ track.is_published|yesno:"Published,Draft" }}</span></p>
 
 <div class="head">
   <h2>Activities</h2>
@@ -28,7 +28,7 @@
           <td><a href="{% url 'activity_detail' activity.pk %}">{{ activity.title }}</a></td>
           <td>{{ activity.get_difficulty_display }}</td>
           <td>{{ activity.get_language_display }}</td>
-          <td>{{ activity.is_published|yesno:"Published,Draft" }}</td>
+          <td><span class="tag{% if activity.is_published %} ok{% endif %}">{{ activity.is_published|yesno:"Published,Draft" }}</span></td>
         </tr>
       {% endfor %}
     </tbody>
