@@ -1,13 +1,31 @@
 from decimal import Decimal
 
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Count, Max
+from django.utils import timezone
 
 from . import judge0
 from .models import Enrollment, Submission, TestResult
 
 Status = TestResult.Status
 Verdict = Submission.Verdict
+
+
+class SubmissionBlocked(Exception):
+    pass
+
+
+def submission_blocked(activity, attempts_used):
+    """The reason a student can't submit right now, or None (BR-11, BR-23)."""
+    if not judge0.is_configured():
+        return "Code checking isn't set up yet, so submissions are closed."
+    if activity.due_at and timezone.now() > activity.due_at:
+        return "The due date has passed."
+    if attempts_used >= activity.max_attempts:
+        return "You've used all your attempts for this activity."
+    if not activity.test_cases.exists():
+        return "This activity has no test cases yet."
+    return None
 
 
 def same_output(actual, expected):
@@ -52,11 +70,17 @@ def save_submission(enrollment, activity, source_code, results):
     passed_points = sum(test.points for test, status, *_ in results if status == Status.PASSED)
     with transaction.atomic():
         Enrollment.objects.select_for_update().get(pk=enrollment.pk)
-        last = Submission.objects.filter(enrollment=enrollment, activity=activity).aggregate(n=Max("attempt_no"))["n"] or 0
+        activity.refresh_from_db(fields=["max_attempts", "due_at"])
+        attempts = Submission.objects.filter(enrollment=enrollment, activity=activity).aggregate(
+            used=Count("pk"), last=Max("attempt_no"),
+        )
+        blocked = submission_blocked(activity, attempts["used"])
+        if blocked:
+            raise SubmissionBlocked(blocked)
         submission = Submission.objects.create(
             enrollment=enrollment,
             activity=activity,
-            attempt_no=last + 1,
+            attempt_no=(attempts["last"] or 0) + 1,
             source_code=source_code,
             verdict=verdict_for([status for _, status, *_ in results]),
             passed_count=sum(1 for _, status, *_ in results if status == Status.PASSED),

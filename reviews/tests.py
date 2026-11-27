@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
@@ -6,6 +8,7 @@ from accounts.models import User
 from tracks.models import Activity, Enrollment, LearningTrack, Submission
 from tracks.tests import make_user
 
+from .forms import PeerReviewForm, ReflectionForm
 from .models import PeerReview, Reflection
 
 def submit(enrollment, activity, verdict="ACCEPTED"):
@@ -61,6 +64,19 @@ class PeerReviewTests(TestCase):
         response = self.client.post(self.url, {**REVIEW, "comment": "A second review that should not be saved."})
         self.assertRedirects(response, reverse("review_update", args=[PeerReview.objects.get().pk]))
         self.assertEqual(PeerReview.objects.count(), 1)
+
+    def test_review_created_after_lookup_redirects_to_edit(self):
+        def form_after_other_post(**kwargs):
+            PeerReview.objects.create(submission=self.accepted, reviewer=self.ben, **REVIEW)
+            return PeerReviewForm(**kwargs)
+
+        with mock.patch("reviews.views.ReviewCreateView.form_class", side_effect=form_after_other_post):
+            response = self.client.post(self.url, {**REVIEW, "approach_rating": 1})
+        review = PeerReview.objects.get()
+        self.assertEqual(review.approach_rating, REVIEW["approach_rating"])
+        self.assertRedirects(response, reverse("review_update", args=[review.pk]))
+        self.assertIn("You've already reviewed this submission. You can edit your review here.",
+                      [str(m) for m in get_messages(response.wsgi_request)])
 
     def test_cannot_review_own_unaccepted_or_other_track_submissions(self):
         self.client.force_login(self.ana)
@@ -139,6 +155,19 @@ class ReflectionTests(TestCase):
         response = self.client.post(self.url, {"content": TEXT + " again"})
         self.assertRedirects(response, reverse("reflection_update", args=[Reflection.objects.get().pk]))
         self.assertEqual(Reflection.objects.count(), 1)
+
+    def test_reflection_created_after_lookup_redirects_to_edit(self):
+        def form_after_other_post(**kwargs):
+            Reflection.objects.create(submission=self.submission, content=TEXT)
+            return ReflectionForm(**kwargs)
+
+        with mock.patch("reviews.views.ReflectionCreateView.form_class", side_effect=form_after_other_post):
+            response = self.client.post(self.url, {"content": TEXT + " More practice next time."})
+        reflection = Reflection.objects.get()
+        self.assertEqual(reflection.content, TEXT)
+        self.assertRedirects(response, reverse("reflection_update", args=[reflection.pk]))
+        self.assertIn("You've already written a reflection. You can edit it here.",
+                      [str(m) for m in get_messages(response.wsgi_request)])
 
     def test_only_the_submitter_can_write_or_change_it(self):
         self.client.post(self.url, {"content": TEXT})

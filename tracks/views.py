@@ -174,6 +174,12 @@ class TestCaseUpdateView(OwnTestCaseMixin, SuccessMessageMixin, UpdateView):
     template_name = "tracks/test_case_form.html"
     success_message = "Test case saved."
 
+    def form_valid(self, form):
+        if self.object.results.exists():
+            messages.error(self.request, "This test case already has results, so it can't be changed. Add a new test case instead.")
+            return redirect("activity_detail", pk=self.object.activity_id)
+        return super().form_valid(form)
+
     def get_context_data(self, **kwargs):
         return super().get_context_data(activity=self.object.activity, **kwargs)
 

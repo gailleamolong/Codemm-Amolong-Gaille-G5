@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views.generic import CreateView, DeleteView, UpdateView
@@ -39,9 +40,22 @@ class ReviewCreateView(StudentMixin, SuccessMessageMixin, CreateView):
             self.submission = get_object_or_404(reviewable_submissions(request.user), pk=kwargs["submission_pk"])
             existing = self.submission.reviews.filter(reviewer=request.user).first()
             if existing:
-                messages.info(request, "You've already reviewed this submission. You can edit your review here.")
-                return redirect("review_update", pk=existing.pk)
+                return self.redirect_to_existing(existing)
         return super().dispatch(request, *args, **kwargs)
+
+    def redirect_to_existing(self, review):
+        messages.info(self.request, "You've already reviewed this submission. You can edit your review here.")
+        return redirect("review_update", pk=review.pk)
+
+    def form_valid(self, form):
+        try:
+            with transaction.atomic():
+                return super().form_valid(form)
+        except IntegrityError:
+            existing = self.submission.reviews.filter(reviewer=self.request.user).first()
+            if existing is None:
+                raise
+            return self.redirect_to_existing(existing)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -97,9 +111,22 @@ class ReflectionCreateView(StudentMixin, SuccessMessageMixin, CreateView):
                 Submission.objects.filter(enrollment__student=request.user), pk=kwargs["submission_pk"]
             )
             if hasattr(self.submission, "reflection"):
-                messages.info(request, "You've already written a reflection. You can edit it here.")
-                return redirect("reflection_update", pk=self.submission.reflection.pk)
+                return self.redirect_to_existing(self.submission.reflection)
         return super().dispatch(request, *args, **kwargs)
+
+    def redirect_to_existing(self, reflection):
+        messages.info(self.request, "You've already written a reflection. You can edit it here.")
+        return redirect("reflection_update", pk=reflection.pk)
+
+    def form_valid(self, form):
+        try:
+            with transaction.atomic():
+                return super().form_valid(form)
+        except IntegrityError:
+            existing = Reflection.objects.filter(submission=self.submission).first()
+            if existing is None:
+                raise
+            return self.redirect_to_existing(existing)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
