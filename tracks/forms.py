@@ -1,5 +1,6 @@
 from django import forms
 from django.db.models import Q
+from django.utils import timezone
 
 from .models import Activity, LearningTrack, Submission, TestCase
 
@@ -29,6 +30,13 @@ class ActivityForm(forms.ModelForm):
         if taken.exclude(pk=self.instance.pk).exists():
             raise forms.ValidationError("This track already has an activity with this title.")
         return title
+
+    def clean_due_at(self):
+        due_at = self.cleaned_data.get("due_at")
+        unchanged = self.instance.pk and due_at == self.instance.due_at
+        if due_at and not unchanged and due_at <= timezone.now():
+            raise forms.ValidationError("Pick a due date in the future.")
+        return due_at
 
     def clean(self):
         cleaned = super().clean()

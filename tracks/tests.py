@@ -510,3 +510,92 @@ class SubmissionHistoryTests(TestCase):
         self.client.force_login(self.ana)
         recent = self.client.get(reverse("student_dashboard")).context["recent"]
         self.assertEqual([s.enrollment.student for s in recent], [self.ana])
+
+
+class DataIntegrityTests(TestCase):
+    def setUp(self):
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        self.track = LearningTrack.objects.create(instructor=self.sir, title="Python Basics", is_published=True)
+        self.client.force_login(self.sir)
+
+    def due(self, **delta):
+        return (timezone.localtime() + timedelta(**delta)).strftime("%Y-%m-%dT%H:%M")
+
+    def test_due_date_cannot_be_in_the_past(self):
+        url = reverse("activity_create", args=[self.track.pk])
+        errors = self.client.post(url, activity_data(due_at=self.due(days=-1))).context["form"].errors
+        self.assertEqual(errors["due_at"], ["Pick a due date in the future."])
+        self.client.post(url, activity_data(due_at=self.due(days=7)))
+        self.assertTrue(Activity.objects.filter(due_at__isnull=False).exists())
+
+    def test_existing_past_due_date_can_be_kept_when_editing(self):
+        past = timezone.localtime().replace(second=0, microsecond=0) - timedelta(days=1)
+        activity = Activity.objects.create(track=self.track, due_at=past, **activity_data())
+        response = self.client.post(reverse("activity_update", args=[activity.pk]),
+                                    activity_data(title="Renamed", due_at=past.strftime("%Y-%m-%dT%H:%M")))
+        self.assertRedirects(response, reverse("track_detail", args=[self.track.pk]))
+
+    def count_track_page_queries(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        with CaptureQueriesContext(connection) as captured:
+            self.client.get(reverse("track_detail", args=[self.track.pk]))
+        return len(captured)
+
+    def test_track_page_query_count_does_not_grow_with_students(self):
+        for n in range(3):
+            Enrollment.objects.create(student=make_user(f"s{n}", User.Role.STUDENT), track=self.track)
+        with_three = self.count_track_page_queries()
+        for n in range(3, 8):
+            Enrollment.objects.create(student=make_user(f"s{n}", User.Role.STUDENT), track=self.track)
+        self.assertEqual(self.count_track_page_queries(), with_three)
+
+    def test_enrolling_twice_keeps_one_record(self):
+        student = make_user("ana", User.Role.STUDENT)
+        self.client.force_login(student)
+        for _ in range(2):
+            self.client.post(reverse("enroll", args=[self.track.pk]))
+        self.assertEqual(Enrollment.objects.filter(student=student).count(), 1)
+
+
+class SecurityTests(TestCase):
+    def setUp(self):
+        self.sir = make_user("sir", User.Role.INSTRUCTOR)
+        self.track = LearningTrack.objects.create(instructor=self.sir, title="Python Basics", is_published=True)
+
+    def test_post_without_csrf_token_is_rejected(self):
+        client = self.client_class(enforce_csrf_checks=True)
+        client.force_login(self.sir)
+        self.assertEqual(client.post(reverse("track_create"), {"title": "No token"}).status_code, 403)
+        self.assertEqual(client.post(reverse("track_delete", args=[self.track.pk])).status_code, 403)
+        self.assertFalse(LearningTrack.objects.filter(title="No token").exists())
+        self.assertTrue(LearningTrack.objects.filter(pk=self.track.pk).exists())
+
+    def test_delete_pages_ask_before_deleting(self):
+        self.client.force_login(self.sir)
+        response = self.client.get(reverse("track_delete", args=[self.track.pk]))
+        self.assertContains(response, "This can't be undone.")
+        self.assertTrue(LearningTrack.objects.filter(pk=self.track.pk).exists())
+
+    def test_user_input_is_escaped_not_run(self):
+        self.client.force_login(self.sir)
+        self.client.post(reverse("track_update", args=[self.track.pk]), {"title": "<script>alert(1)</script>"})
+        response = self.client.get(reverse("track_detail", args=[self.track.pk]))
+        self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+        self.assertNotContains(response, "<script>alert(1)</script>")
+
+    def test_student_cannot_reach_instructor_pages_by_url(self):
+        self.client.force_login(make_user("ana", User.Role.STUDENT))
+        for name in ("track_list", "track_create"):
+            self.assertEqual(self.client.get(reverse(name)).status_code, 403)
+        for name in ("track_detail", "track_update", "track_delete", "progress_report"):
+            self.assertEqual(self.client.get(reverse(name, args=[self.track.pk])).status_code, 403)
+
+
+class PublishErrorMessageTests(TestCase):
+    def test_publish_error_is_shown_on_the_page(self):
+        sir = make_user("sir", User.Role.INSTRUCTOR)
+        track = LearningTrack.objects.create(instructor=sir, title="Python Basics")
+        self.client.force_login(sir)
+        response = self.client.post(reverse("activity_create", args=[track.pk]), activity_data(is_published="on"))
+        self.assertContains(response, "Add at least one test case before publishing.")

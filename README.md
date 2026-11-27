@@ -99,12 +99,29 @@ Open http://127.0.0.1:8000.
 
 ## Tests
 
-```bash
-python manage.py test
-```
+The tests create and then delete a temporary database. Supabase's connection pooler doesn't
+allow that, so the tests use a separate local PostgreSQL server while the app keeps using Supabase.
 
-The tests create a temporary test database, so run them against a local PostgreSQL database
-rather than Supabase.
+1. Start a throwaway PostgreSQL server (needs Docker):
+
+   ```bash
+   docker run -d --name codemm-test-db -e POSTGRES_USER=codemm -e POSTGRES_PASSWORD=codemm \
+     -e POSTGRES_DB=codemm -p 127.0.0.1:5433:5432 postgres:17-alpine
+   ```
+
+2. Copy the `TEST_DB_*` lines from `.env.example` into your `.env`.
+3. Run the tests:
+
+   ```bash
+   python manage.py test
+   ```
+
+   Expected result: `Ran 98 tests ... OK`. Judge0 is replaced with a stand-in, so the tests never
+   call the network.
+
+4. Remove the test server when you're done: `docker rm -f codemm-test-db`.
+
+Test files: `accounts/tests.py`, `tracks/tests.py`, `reviews/tests.py`, `reports/tests.py`.
 
 ## Project structure
 
