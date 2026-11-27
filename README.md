@@ -45,6 +45,8 @@ by test case points. Tracks, activities and test cases that have submissions can
 
 Code runs on [Judge0](https://judge0.com), never on the Codemm server. It is off by default:
 with `JUDGE0_URL` empty in `.env`, Run and Submit are closed and no code leaves the server.
+Student code is only sent over HTTPS (plain `http://` is refused except for a Judge0 on this
+computer), and Judge0 replies larger than 1 MB are rejected.
 To turn it on, set `JUDGE0_URL` to a Judge0 server, for example the public
 `https://ce.judge0.com` for demos (rate-limited and run by a third party, so don't put private
 data in test cases) or your own Judge0 on a Linux server. The automated tests replace Judge0
@@ -116,7 +118,7 @@ allow that, so the tests use a separate local PostgreSQL server while the app ke
    python manage.py test
    ```
 
-   Expected result: `Ran 98 tests ... OK`. Judge0 is replaced with a stand-in, so the tests never
+   Expected result: `Ran 102 tests ... OK`. Judge0 is replaced with a stand-in, so the tests never
    call the network.
 
 4. Remove the test server when you're done: `docker rm -f codemm-test-db`.
