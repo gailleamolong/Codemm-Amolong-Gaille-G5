@@ -15,7 +15,7 @@
         <tr>
           <td><a href="{% url 'track_detail' track.pk %}">{{ track.title }}</a></td>
           <td>{{ track.activities.all|length }}</td>
-          <td>{{ track.is_published|yesno:"Published,Draft" }}</td>
+          <td><span class="tag{% if track.is_published %} ok{% endif %}">{{ track.is_published|yesno:"Published,Draft" }}</span></td>
         </tr>
       {% endfor %}
     </tbody>

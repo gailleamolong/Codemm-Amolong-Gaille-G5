@@ -8,7 +8,7 @@
 <div class="card">
   {% if tracks %}
   <ul class="list">
-    {% for track in tracks %}<li><a href="{% url 'track_detail' track.pk %}">{{ track.title }}</a> <span class="muted">· {{ track.is_published|yesno:"Published,Draft" }}</span></li>{% endfor %}
+    {% for track in tracks %}<li><a href="{% url 'track_detail' track.pk %}">{{ track.title }}</a> <span class="tag{% if track.is_published %} ok{% endif %}">{{ track.is_published|yesno:"Published,Draft" }}</span></li>{% endfor %}
   </ul>
   {% else %}
   <p class="muted empty">You haven't created any learning tracks yet.</p>

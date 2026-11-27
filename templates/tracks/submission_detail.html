@@ -6,7 +6,7 @@
 {% else %}
 <p><a href="{% url 'student_activity' submission.activity_id %}">← {{ submission.activity.title }}</a></p>
 {% endif %}
-<h1>Attempt {{ submission.attempt_no }} · {{ submission.get_verdict_display }}</h1>
+<h1>Attempt {{ submission.attempt_no }} <span class="tag{% if submission.verdict == "ACCEPTED" %} ok{% elif submission.verdict != "PENDING" %} bad{% endif %}">{{ submission.get_verdict_display }}</span></h1>
 <div class="card">
   <dl class="details">
     {% if user.role == "INSTRUCTOR" %}<dt>Student</dt><dd>{{ submission.enrollment.student.get_full_name|default:submission.enrollment.student.username }}</dd>{% endif %}
@@ -20,14 +20,14 @@
 {% for r in results %}
 <div class="card">
   {% if r.test_case.is_sample or user.role == "INSTRUCTOR" %}
-  <h3>Test {{ r.test_case.seq_no }} · {{ r.get_status_display }}{% if not r.test_case.is_sample %} · hidden{% endif %}</h3>
+  <h3>Test {{ r.test_case.seq_no }} <span class="tag{% if r.status == "PASSED" %} ok{% else %} bad{% endif %}">{{ r.get_status_display }}</span>{% if not r.test_case.is_sample %} · hidden{% endif %}</h3>
   <div class="row2">
     <div><p class="muted">Input</p><pre>{{ r.test_case.input_data|default:"(none)" }}</pre></div>
     <div><p class="muted">Expected output</p><pre>{{ r.test_case.expected_output }}</pre></div>
   </div>
   <p class="muted">{% if user == submission.enrollment.student %}Your output{% else %}Student output{% endif %}{% if r.exec_time_ms is not None %} · {{ r.exec_time_ms }} ms{% endif %}</p><pre>{{ r.actual_output|default:"(no output)" }}</pre>
   {% else %}
-  <h3>Hidden test {{ forloop.counter }} · {{ r.get_status_display }}</h3>
+  <h3>Hidden test {{ forloop.counter }} <span class="tag{% if r.status == "PASSED" %} ok{% else %} bad{% endif %}">{{ r.get_status_display }}</span></h3>
   {% endif %}
 </div>
 {% endfor %}

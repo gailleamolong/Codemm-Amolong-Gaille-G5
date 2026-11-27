@@ -53,7 +53,7 @@
       <tr>
         <td>{{ s.enrollment.student.get_full_name|default:s.enrollment.student.username }}</td>
         <td><a href="{% url 'submission_detail' s.pk %}">Attempt {{ s.attempt_no }}</a></td>
-        <td>{{ s.get_verdict_display }}</td>
+        <td><span class="tag{% if s.verdict == "ACCEPTED" %} ok{% elif s.verdict != "PENDING" %} bad{% endif %}">{{ s.get_verdict_display }}</span></td>
         <td>{{ s.score|floatformat:0 }}%</td>
         <td>{{ s.submitted_at|date:"M j, g:i A" }}</td>
       </tr>

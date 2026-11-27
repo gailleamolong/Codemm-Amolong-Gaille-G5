@@ -18,7 +18,7 @@
 <h2>Recent attempts</h2>
 <div class="card">
   <ul class="list">
-    {% for s in recent %}<li><a href="{% url 'submission_detail' s.pk %}">{{ s.activity.title }} · attempt {{ s.attempt_no }}</a> <span class="muted">· {{ s.get_verdict_display }} · {{ s.score|floatformat:0 }}%</span></li>{% endfor %}
+    {% for s in recent %}<li><a href="{% url 'submission_detail' s.pk %}">{{ s.activity.title }} · attempt {{ s.attempt_no }}</a> <span class="muted">· <span class="tag{% if s.verdict == "ACCEPTED" %} ok{% elif s.verdict != "PENDING" %} bad{% endif %}">{{ s.get_verdict_display }}</span> · {{ s.score|floatformat:0 }}%</span></li>{% endfor %}
   </ul>
 </div>
 {% endif %}
