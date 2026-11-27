@@ -78,7 +78,7 @@ form.stack { display: flex; flex-direction: column; gap: 16px; }
 .check input { width: 18px; height: 18px; accent-color: var(--green); }
 .field input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
 .field.error input { border-color: var(--red); }
-.field .err { color: var(--red); font-size: 13.5px; }
+.err { color: var(--red); font-size: 13.5px; }
 
 /* Messages */
 .messages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
