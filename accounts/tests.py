@@ -234,3 +234,34 @@ class ProfileTests(TestCase):
     def test_invalid_id_number(self):
         response = self.client.post(reverse("profile_edit"), self.form(id_number="abc"))
         self.assertIn("id_number", response.context["form"].errors)
+
+
+class LoginRateLimitTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.user = make_user("maria")
+
+    def test_five_failed_logins_lock_the_account_for_this_address(self):
+        for _ in range(5):
+            self.client.post(reverse("login"), {"username": "maria", "password": "wrong"})
+        response = self.client.post(reverse("login"), {"username": "maria", "password": PASSWORD})
+        self.assertContains(response, "Too many failed attempts. Try again in 15 minutes.")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_a_successful_login_clears_earlier_failures(self):
+        for _ in range(4):
+            self.client.post(reverse("login"), {"username": "maria", "password": "wrong"})
+        self.client.post(reverse("login"), {"username": "maria", "password": PASSWORD})
+        self.client.logout()
+        for _ in range(4):
+            self.client.post(reverse("login"), {"username": "maria", "password": "wrong"})
+        self.client.post(reverse("login"), {"username": "maria", "password": PASSWORD})
+        self.assertIn("_auth_user_id", self.client.session)
+
+    def test_other_accounts_are_not_locked(self):
+        make_user("ana")
+        for _ in range(5):
+            self.client.post(reverse("login"), {"username": "maria", "password": "wrong"})
+        self.client.post(reverse("login"), {"username": "ana", "password": PASSWORD})
+        self.assertIn("_auth_user_id", self.client.session)

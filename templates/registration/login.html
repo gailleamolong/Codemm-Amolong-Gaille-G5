@@ -3,7 +3,7 @@
 {% block auth_content %}
 <h1>Log in</h1>
 {% include "includes/messages.html" %}
-{% if form.errors %}<p class="msg error">Incorrect username or password.</p>{% endif %}
+{% for error in form.non_field_errors %}<p class="msg error">{{ error }}</p>{% endfor %}
 <form method="post" class="stack">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ next }}">
